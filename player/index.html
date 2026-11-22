@@ -275,7 +275,7 @@ function hideCloudVideo(){cloudVideo.pause();cloudVideo.removeAttribute('src');c
 function mediaUrl(t){
  if(t.source==='local')return t.stream_url;
  if(t.source==='nextcloud')return '/cloud/'+encodeURIComponent(t.filename);
- return cloudPreview?'https://server.taila400aa.ts.net/music/music-api'+t.download_url:'music-api'+t.download_url;
+ return (cloudPreview||localPreview)?'https://server.taila400aa.ts.net/music/music-api'+t.download_url:'music-api'+t.download_url;
 }
 function handlePlayRejection(media,error){
  if(media!==activeMedia()||media.paused&&playbackMode==='none')return;
