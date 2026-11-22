@@ -16,7 +16,20 @@ from xml.etree import ElementTree as ET
 
 import httpx
 
-DAV_URL = "https://nuvem.aggillintelligence.com.br/remote.php/dav/files/aggilli-admin/musica/"
+DAV_BASE = "https://nuvem.aggillintelligence.com.br/remote.php/dav/files/aggilli-admin/"
+DEFAULT_DAV_FOLDER = "musicas"
+
+
+def webdav_folder_url():
+    """Use the configured Nextcloud folder; never silently fall back on 403."""
+    folder = os.environ.get("AGGILLI_WEBDAV_FOLDER", DEFAULT_DAV_FOLDER).strip().strip("/")
+    if not folder or folder in {".", ".."} or "/" in folder or "\\\\" in folder or "?" in folder or "#" in folder:
+        raise RuntimeError("Invalid AGGILLI_WEBDAV_FOLDER; use one folder name")
+    return DAV_BASE + quote(folder, safe="") + "/"
+
+
+DAV_URL = webdav_folder_url()
+
 AZURA = "http://127.0.0.1:8080/api/station/1"
 API_KEY_FILE = Path("/etc/aggilli-music/azuracast-api-key")
 STATE_FILE = Path("/var/lib/aggilli-music/nextcloud-azura-state.json")
@@ -27,6 +40,11 @@ DAV = "{DAV:}"
 def list_remote(client):
     xml = b'<d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/><d:getcontentlength/><d:getetag/></d:prop></d:propfind>'
     response = client.request("PROPFIND", DAV_URL, headers={"Depth": "1", "Content-Type": "application/xml"}, content=xml)
+    if response.status_code == 403:
+        raise RuntimeError(
+            "Nextcloud WebDAV HTTP 403: access denied to folder "
+            + DAV_URL + " (check AGGILLI_WEBDAV_FOLDER and user permissions)"
+        )
     response.raise_for_status()
     if response.status_code != 207:
         raise RuntimeError(f"WebDAV PROPFIND HTTP {response.status_code}")
