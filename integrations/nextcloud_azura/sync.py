@@ -23,7 +23,7 @@ DEFAULT_DAV_FOLDER = "musicas"
 def webdav_folder_url():
     """Use the configured Nextcloud folder; never silently fall back on 403."""
     folder = os.environ.get("AGGILLI_WEBDAV_FOLDER", DEFAULT_DAV_FOLDER).strip().strip("/")
-    if not folder or folder in {".", ".."} or "/" in folder or "\\\\" in folder or "?" in folder or "#" in folder:
+    if not folder or folder in {".", ".."} or "/" in folder or chr(92) in folder or "?" in folder or "#" in folder:
         raise RuntimeError("Invalid AGGILLI_WEBDAV_FOLDER; use one folder name")
     return DAV_BASE + quote(folder, safe="") + "/"
 
