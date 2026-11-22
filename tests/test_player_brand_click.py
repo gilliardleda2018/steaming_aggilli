@@ -7,7 +7,7 @@ HTML = (ROOT / "player" / "index.html").read_text(encoding="utf-8")
 
 class PlayerBrandAndClickTests(unittest.TestCase):
     def test_official_logo_in_player_header(self):
-        self.assertIn('src="aggilli-music-logo.jpg"', HTML)
+        self.assertRegex(HTML, r'src="aggilli-music-logo\.jpg(?:\?v=[\da-f]+)?"')
         self.assertIn('alt="Logomarca oficial Aggilli Music"', HTML)
         self.assertTrue((ROOT / "player" / "aggilli-music-logo.jpg").is_file())
 
