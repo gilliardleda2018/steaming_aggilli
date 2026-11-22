@@ -20,7 +20,7 @@ class UnifiedQueueTests(unittest.TestCase):
         self.assertIn("window.aggilliRenderQueue()", HTML)
 
     def test_queue_uses_existing_playback(self):
-        self.assertIn("button.addEventListener('click',()=>playTrack(track))", HTML)
+        self.assertIn("line.addEventListener('click',e=>{if(e.target.closest('button'))return;playTrack(track);})", HTML)
         self.assertIn("function refreshNow(){", HTML)
 
 if __name__ == "__main__":
