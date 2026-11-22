@@ -12,6 +12,8 @@ QUEUE = BASE / "sync-requests" / "pending"
 STATUS = BASE / "sync-status.json"
 LOCK = BASE / "sync-worker.lock"
 UNIT = "aggilli-nextcloud-sync.service"
+CATALOG_REFRESH = "/home/gilliard/projetos/steaming_aggilli/integrations/nextcloud_azura/refresh_player_catalog.py"
+PYTHON = "/opt/aggilli-nextcloud-sync-venv/bin/python"
 
 
 def report(state, message):
@@ -43,8 +45,18 @@ def main():
                 ["/usr/bin/systemctl", "start", "--wait", UNIT],
                 timeout=6 * 3600 + 60, capture_output=True, text=True,
             )
-            report("success" if result.returncode == 0 else "failed",
-                   "Importação concluída" if result.returncode == 0 else "Falha na importação; consulte journalctl")
+            if result.returncode != 0:
+                report("failed", "Falha na importação; consulte journalctl")
+                return
+            refresh = subprocess.run(
+                [PYTHON, CATALOG_REFRESH],
+                timeout=90, capture_output=True, text=True,
+            )
+            if refresh.returncode == 0:
+                report("success", "Importação concluída e catálogo do Winamp atualizado")
+            else:
+                report("failed", "Importação concluída, mas atualização do catálogo falhou: "
+                       + (refresh.stderr.strip() or refresh.stdout.strip())[-350:])
         except (OSError, subprocess.TimeoutExpired):
             report("failed", "Não foi possível concluir o serviço")
 
