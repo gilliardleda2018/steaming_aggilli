@@ -8,7 +8,7 @@ import hashlib
 import hmac
 import os
 import time
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from pydantic import BaseModel
 from main import require_upload_auth
 from cloud_stream import remote_url, proxy_media
@@ -45,6 +45,6 @@ async def playback_token(request: PlaybackRequest):
 
 @router.get("/signed-cloud/{filename}")
 @router.head("/signed-cloud/{filename}")
-async def signed_stream(filename: str, expires: int, token: str, range: str | None = Header(default=None)):
+async def signed_stream(filename: str, expires: int, token: str, request: Request, range: str | None = Header(default=None)):
     verify(filename, expires, token)
-    return await proxy_media(filename, "GET", range)
+    return await proxy_media(filename, request.method, range)
