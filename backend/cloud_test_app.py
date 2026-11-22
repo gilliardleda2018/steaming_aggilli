@@ -62,3 +62,27 @@ async def preview_catalog_file(catalog_name: str):
     if not file.is_file():
         raise HTTPException(404)
     return FileResponse(file, media_type="application/json", headers={"Cache-Control": "no-store"})
+
+
+# Local media preview: no Nextcloud authentication or signed URLs.
+# Test server remains loopback-only and the preview requires admin login.
+@app.get("/catalogo-local.json", dependencies=[Depends(require_upload_auth)])
+async def local_preview_catalog():
+    file = Path("/var/www/aggilli-music/catalogo-local.json")
+    if not file.is_file():
+        raise HTTPException(404, detail="Run local catalog generator first")
+    return FileResponse(file, media_type="application/json", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/media/{directory}/{filename}", dependencies=[Depends(require_upload_auth)])
+async def local_preview_media(directory: str, filename: str):
+    if directory not in {"musicas", "videos"}:
+        raise HTTPException(404)
+    ext = ".mp3" if directory == "musicas" else ".mp4"
+    if not filename or filename.startswith(".") or not filename.lower().endswith(ext):
+        raise HTTPException(404)
+    root = Path("/srv/aggilli-music/media") / directory
+    file = root / filename
+    if file.is_symlink() or not file.is_file() or file.parent != root:
+        raise HTTPException(404)
+    return FileResponse(file, media_type="audio/mpeg" if ext == ".mp3" else "video/mp4", headers={"Cache-Control": "no-store"})
