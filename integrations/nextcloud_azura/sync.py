@@ -4,10 +4,8 @@
 Run as root with /etc/aggilli-music/nextcloud-sync.env loaded.
 Uses the same AzuraCast upload API as the existing Aggilli Music backend.
 """
-import base64
 import json
 import os
-import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -39,7 +37,7 @@ def list_remote(client):
         props = item.find(f".//{DAV}prop")
         if not props or props.find(f"{DAV}resourcetype/{DAV}collection") is not None:
             continue
-        if not name or "/" in name or "\\" in name or name.startswith(".") or Path(name).suffix.lower() not in {".mp3", ".mp4"}:
+        if not name or "/" in name or "\\" in name or name.startswith(".") or name.lower().endswith(".temp.mp4") or Path(name).suffix.lower() not in {".mp3", ".mp4"}:
             continue
         size = props.findtext(f"{DAV}getcontentlength") or ""
         if not size.isdecimal() or int(size) > MAX_BYTES or int(size) == 0:
@@ -73,11 +71,17 @@ def main():
     headers = {"X-API-Key": key}
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {}
+    limit = int(os.environ.get("AGGILLI_SYNC_MAX_FILES", "1"))
+    if limit < 1 or limit > 100:
+        raise RuntimeError("AGGILLI_SYNC_MAX_FILES must be 1..100")
+    imported = 0
     with httpx.Client(auth=(user, password), timeout=httpx.Timeout(120, connect=15), follow_redirects=False) as cloud, httpx.Client(timeout=240) as azura:
         files = azura.get(AZURA + "/files", headers=headers)
         files.raise_for_status()
         existing = {Path(x.get("path", "")).name.casefold() for x in files.json()}
         for name, size, etag in list_remote(cloud):
+            if imported >= limit:
+                break
             output = name if name.lower().endswith(".mp3") else Path(name).stem + ".mp3"
             if output.casefold() in existing:
                 print(f"SKIP exists: {output}", flush=True)
@@ -97,12 +101,14 @@ def main():
                     response = azura.post(AZURA + "/files/upload", headers=headers, files={"file": (output, stream, "audio/mpeg")})
                 response.raise_for_status()
                 existing.add(output.casefold())
+                imported += 1
                 state[name] = {"etag": etag, "azuracast_filename": output}
                 temp = STATE_FILE.with_suffix(".tmp")
                 temp.write_text(json.dumps(state, ensure_ascii=False, indent=2))
                 os.chmod(temp, 0o600)
                 os.replace(temp, STATE_FILE)
                 print(f"OK: {output}", flush=True)
+        print(f"FINISHED: {imported} imported (limit {limit})", flush=True)
 
 
 if __name__ == "__main__":
