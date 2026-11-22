@@ -8,6 +8,7 @@ from fastapi import FastAPI, Depends, Request
 from fastapi.responses import HTMLResponse
 from main import require_upload_auth
 from cloud_stream import router
+from cloud_catalog import router as catalog_router
 
 app = FastAPI(
     title="Aggilli Music Cloud Streaming - Isolated Test",
@@ -16,6 +17,7 @@ app = FastAPI(
     openapi_url=None,
 )
 app.include_router(router)
+app.include_router(catalog_router)
 
 @app.get("/health")
 async def health():
