@@ -252,6 +252,15 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
  <div id="aggilliDjResults"></div>
  <div style="font-size:11px;color:#a5b8b0;margin-top:10px">Recomendações locais por metadados. A integração conversacional com a ANI será habilitada após validar a API e as permissões comerciais.</div>
 </section>
+<!-- AGGILLI_UNIFIED_QUEUE_V1 -->
+<section id="aggilliQueuePanel" aria-label="Fila de reprodução" style="margin:12px 0;padding:14px;border:1px solid #37564b;border-radius:12px;background:#101d1b;color:#eafff4">
+ <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+  <strong>♫ Próximas músicas</strong>
+  <button id="aggilliQueueLibrary" type="button" style="padding:7px 11px;border-radius:7px">Voltar à biblioteca</button>
+ </div>
+ <p id="aggilliQueueStatus" role="status" style="font-size:12px;color:#a9c3b7">Selecione uma faixa para iniciar.</p>
+ <div id="aggilliQueueItems" style="max-height:240px;overflow-y:auto"></div>
+</section>
  <div class="genres" id="genreCards"></div>
  <div class="library-bar"><h2 id="libraryHeading">Biblioteca musical</h2><div id="status">Carregando biblioteca...</div></div>
  <input id="search" placeholder="Pesquisar artista ou música..." aria-label="Pesquisar artista ou música" oninput="render()">
@@ -370,6 +379,7 @@ let playbackRequestId=0;
 let tracks=[];
 let currentTrackId=null;
 let playQueue=[];
+let aggilliDjQueueActive=false;
 let shuffleEnabled=false;
 let shuffleHistory=[];
 let shuffleHistoryIndex=-1;
@@ -552,6 +562,7 @@ function trackArtistTitle(t){
  return {artist:artist||'Artista não informado',title};
 }
 function refreshNow(){
+ if(typeof window.aggilliRenderQueue==='function')window.aggilliRenderQueue();
  const active=tracks.find(t=>t.track_id===currentTrackId);
  document.getElementById('nowGenre').textContent=playbackMode==='radio'?'Rádio ao vivo':active?(genres[currentTrackId]||'Outros'):'Aggilli Music';
  const rows=document.querySelectorAll('.winamp-row');
@@ -570,7 +581,7 @@ function render(){
   const searchText=[parts.artist,parts.title,m.text||''].join(' ').toLocaleLowerCase('pt-BR');
   return (selectedGenre==='Todos'||(genres[t.track_id]||'Outros')===selectedGenre)&&searchText.includes(q);
  });
- playQueue=filtered.map(t=>t.track_id);
+ if(!aggilliDjQueueActive)playQueue=filtered.map(t=>t.track_id);
  document.getElementById('status').textContent=filtered.length+' músicas';
  filtered.forEach((t,i)=>{
   const row=document.createElement('div');row.className='winamp-row';
@@ -995,7 +1006,9 @@ fetch('catalogo.json',{cache:'no-store'})
   const controls=document.createElement('div');controls.style.margin='10px 0';
   const start=document.createElement('button');start.type='button';start.textContent='▶ Reproduzir seleção';start.style.borderRadius='8px';
   start.addEventListener('click',()=>{
+   aggilliDjQueueActive=true;
    playQueue=ranked.map(x=>x.t.track_id);
+   if(window.aggilliRenderQueue)window.aggilliRenderQueue();
    if(typeof playTrack==='function')playTrack(ranked[0].t);
   });
   controls.append(start);results.append(controls);
@@ -1009,12 +1022,50 @@ fetch('catalogo.json',{cache:'no-store'})
    why.style.color='#9cbab1';info.append(title,why);
    const play=document.createElement('button');play.type='button';play.textContent='▶';play.setAttribute('aria-label','Reproduzir '+title.textContent);
    play.style.cssText='padding:6px 11px;border-radius:7px';
-   play.addEventListener('click',()=>{playQueue=ranked.map(x=>x.t.track_id);playTrack(t);});
+   play.addEventListener('click',()=>{aggilliDjQueueActive=true;playQueue=ranked.map(x=>x.t.track_id);if(window.aggilliRenderQueue)window.aggilliRenderQueue();playTrack(t);});
    line.append(info,play);results.append(line);
   });
  }
  generate.addEventListener('click',()=>create(detect(prompt.value)));
  document.querySelectorAll('#aggilliDjChips [data-dj]').forEach(b=>b.addEventListener('click',()=>{prompt.value=b.textContent;create(b.dataset.dj);}));
+})();
+</script>
+<script>
+/* AGGILLI_UNIFIED_QUEUE_V1 */
+(() => {
+ const items=document.getElementById('aggilliQueueItems');
+ const status=document.getElementById('aggilliQueueStatus');
+ const library=document.getElementById('aggilliQueueLibrary');
+ if(!items||!status||!library)return;
+ window.aggilliRenderQueue=function(){
+  items.replaceChildren();
+  if(typeof playQueue==='undefined'||!Array.isArray(playQueue))return;
+  const available=playQueue.map(id=>tracks.find(t=>t.track_id===id)).filter(Boolean);
+  status.textContent=(aggilliDjQueueActive?'Seleção DJ ANI':'Biblioteca')+' · '+available.length+' faixa(s)';
+  available.forEach((track,index)=>{
+   const line=document.createElement('div');
+   line.style.cssText='display:flex;align-items:center;gap:9px;border-top:1px solid #2d493d;padding:8px 0';
+   const label=document.createElement('span');label.style.cssText='flex:1;font-size:12px';
+   const parts=trackArtistTitle(track);
+   label.textContent=(index+1)+'. '+parts.artist+' — '+parts.title;
+   if(track.track_id===currentTrackId){label.style.color='#4ade80';label.setAttribute('aria-current','true');}
+   const button=document.createElement('button');button.type='button';button.textContent='▶';
+   button.style.cssText='padding:6px 11px;border-radius:7px';
+   button.setAttribute('aria-label','Reproduzir '+parts.title);
+   button.addEventListener('click',()=>playTrack(track));
+   line.append(label,button);items.append(line);
+  });
+ };
+ library.addEventListener('click',()=>{
+  aggilliDjQueueActive=false;
+  render();
+  window.aggilliRenderQueue();
+ });
+ const originalRender=window.render;
+ if(typeof originalRender==='function'){
+  window.render=function(){originalRender();window.aggilliRenderQueue();};
+ }
+ window.aggilliRenderQueue();
 })();
 </script>
 </body>
