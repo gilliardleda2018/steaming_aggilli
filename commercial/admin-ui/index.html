@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Aggilli Music | Gestão de Direitos</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#07101a;color:#eaf2f8}
+body{max-width:1050px;margin:0 auto;padding:24px}h1{color:#4ade80}h2{font-size:1.1rem}
+section{background:#101c2a;border:1px solid #294052;border-radius:14px;padding:18px;margin:16px 0}
+label{display:block;font-size:.88rem;margin:10px 0 4px}
+input,select,button{font:inherit;border-radius:8px;padding:9px;background:#08131e;color:#fff;border:1px solid #405366}
+input{box-sizing:border-box;width:100%}button{cursor:pointer;background:#245d49;border-color:#4ade80}
+button:disabled{opacity:.5}button.danger{background:#62272d;border-color:#ed8791}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+small,.muted{color:#aebdc8}table{width:100%;border-collapse:collapse}th,td{padding:9px;text-align:left;border-bottom:1px solid #294052;overflow-wrap:anywhere}
+#message{min-height:1.5em}#records{overflow-x:auto}
+</style>
+</head>
+<body>
+<h1>Aggilli Music <small>Administração de direitos</small></h1>
+<p class="muted">Ambiente comercial isolado. Nenhuma música é liberada automaticamente para reprodução.</p>
+<section>
+<h2>Conexão administrativa</h2>
+<div class="grid">
+<div><label for="endpoint">Endereço HTTPS da API comercial</label><input id="endpoint" type="url" placeholder="https://admin.exemplo.com" autocomplete="off"></div>
+<div><label for="token">Token administrativo</label><input id="token" type="password" autocomplete="off" placeholder="Não será armazenado"></div>
+</div>
+<div class="actions"><button id="load" type="button">Consultar licenças</button><button id="clear" type="button">Limpar credenciais</button></div>
+<p id="message" role="status" aria-live="polite"></p>
+</section>
+<section>
+<h2>Cadastro de licença</h2>
+<form id="rights">
+<div class="grid">
+<div><label for="track">ID da faixa no catálogo</label><input id="track" required maxlength="128"></div>
+<div><label for="holder">Titular dos direitos</label><input id="holder" required maxlength="200"></div>
+<div><label for="agreement">Referência do contrato</label><input id="agreement" required maxlength="200"></div>
+<div><label for="status">Situação</label><select id="status"><option value="pending">Pendente</option><option value="approved">Aprovada</option></select></div>
+<div><label for="license">Modalidade</label><select id="license"><option value="interactive_streaming">Streaming interativo</option><option value="web_radio">Rádio web</option></select></div>
+<div><label for="territories">Territórios (ISO, separados por vírgula)</label><input id="territories" value="BR" required></div>
+<div><label for="start">Início da validade</label><input id="start" type="date" required></div>
+<div><label for="end">Fim da validade</label><input id="end" type="date" required></div>
+<div><label><input id="recording" type="checkbox" style="width:auto"> Direitos do fonograma confirmados</label></div>
+<div><label><input id="composition" type="checkbox" style="width:auto"> Direitos da composição confirmados</label></div>
+</div>
+<div class="actions"><button type="submit">Salvar registro</button></div>
+</form>
+</section>
+<section><h2>Licenças cadastradas</h2><div id="records" class="muted">Conecte-se para consultar.</div></section>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const message=text=>$('message').textContent=text;
+function connection(){
+ const url=new URL($('endpoint').value);
+ if(url.protocol!=='https:' || url.username || url.password || url.search || url.hash)throw Error('Informe uma URL HTTPS válida, sem credenciais ou parâmetros.');
+ const token=$('token').value;
+ if(token.length<32)throw Error('Informe o token administrativo.');
+ return {base:url.href.replace(/\/$/,''),token};
+}
+async function request(path,method='GET',body){
+ const {base,token}=connection();
+ const response=await fetch(base+path,{method,headers:{'Authorization':'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,cache:'no-store',redirect:'error'});
+ if(!response.ok)throw Error('A API respondeu HTTP '+response.status);
+ return response.json();
+}
+async function load(){
+ const records=await request('/admin/rights');
+ const holder=$('records');holder.replaceChildren();
+ const table=document.createElement('table');
+ const head=document.createElement('tr');
+ for(const name of ['Faixa','Titular','Status','Contrato','Ação']){const th=document.createElement('th');th.textContent=name;head.append(th);}
+ table.append(head);
+ for(const [id,record] of Object.entries(records)){
+  const tr=document.createElement('tr');
+  for(const value of [id,record.rights_holder,record.status,record.agreement_reference]){const td=document.createElement('td');td.textContent=String(value??'');tr.append(td);}
+  const td=document.createElement('td');
+  if(record.status!=='revoked'){
+   const button=document.createElement('button');button.className='danger';button.textContent='Revogar';
+   button.addEventListener('click',async()=>{
+    if(!confirm('Revogar a autorização da faixa '+id+'?'))return;
+    try{await request('/admin/rights/'+encodeURIComponent(id)+'/revoke','POST');message('Licença revogada.');await load();}catch(e){message(e.message);}
+   });td.append(button);
+  }
+  tr.append(td);table.append(tr);
+ }
+ holder.append(table);
+ if(!Object.keys(records).length)holder.textContent='Nenhum registro cadastrado.';
+}
+$('load').addEventListener('click',async()=>{try{await load();message('Consulta concluída.');}catch(e){message(e.message);}});
+$('clear').addEventListener('click',()=>{$('token').value='';$('endpoint').value='';$('records').textContent='Credenciais limpas.';message('');});
+$('rights').addEventListener('submit',async e=>{
+ e.preventDefault();
+ try{
+  const track=$('track').value.trim();
+  const body={status:$('status').value,license_type:$('license').value,agreement_reference:$('agreement').value.trim(),rights_holder:$('holder').value.trim(),recording_rights_confirmed:$('recording').checked,composition_rights_confirmed:$('composition').checked,territories:$('territories').value.split(',').map(x=>x.trim().toUpperCase()).filter(Boolean),valid_from:$('start').value,valid_until:$('end').value};
+  if(body.status==='approved' && (!body.recording_rights_confirmed || !body.composition_rights_confirmed))throw Error('Confirme ambos os direitos antes de aprovar.');
+  await request('/admin/rights/'+encodeURIComponent(track),'PUT',body);
+  message('Registro salvo.');await load();
+ }catch(err){message(err.message);}
+});
+</script>
+</body>
+</html>
