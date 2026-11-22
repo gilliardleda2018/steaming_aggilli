@@ -444,8 +444,8 @@ function nextTrack(){moveTrack(1)}
 function previousTrack(){moveTrack(-1)}
 function resumeAudio(){
  const media=activeMedia();
- if(!media.src){
-  playRadio();
+ if(!media.getAttribute('src')){
+  document.getElementById('status').textContent='Selecione uma faixa na biblioteca ou clique em RÁDIO.';
   return;
  }
  media.play().catch(e=>handlePlayRejection(media,e));
@@ -472,7 +472,7 @@ function playRadio(){
  hideCloudVideo();
  playbackMode='radio';
  currentTrackId=null;
- audio.src=cloudPreview?'https://server.taila400aa.ts.net/music/radio.mp3':'radio.mp3';
+ audio.src=(cloudPreview||localPreview)?'https://server.taila400aa.ts.net/music/radio.mp3':'radio.mp3';
  document.getElementById('now').textContent='Aggilli Radio — Ao vivo';
  refreshNow();
  audio.play().catch(e=>handlePlayRejection(audio,e));
