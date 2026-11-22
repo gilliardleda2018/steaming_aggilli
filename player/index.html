@@ -231,6 +231,27 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
 <video id="cloudVideo" controls playsinline preload="metadata" hidden style="display:none;width:100%;max-height:340px;margin-top:12px;border-radius:10px;background:#000"></video>
 <audio id="audio" preload="none"></audio>
  </section>
+<!-- AGGILLI_INTEGRATED_DJ_V1 -->
+<section id="aggilliDjPanel" aria-label="DJ inteligente integrado" style="margin:14px 0;padding:18px;border:1px solid #356958;border-radius:14px;background:linear-gradient(125deg,#102b28,#101925);color:#eafff4">
+ <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <div style="font-size:27px" aria-hidden="true">✦</div>
+  <div><strong style="color:#4ade80;font-size:17px">DJ ANI · Aggilli Music</strong><div style="font-size:12px;color:#b4c8c2">Descubra músicas da sua biblioteca sem sair do player</div></div>
+ </div>
+ <label for="aggilliDjPrompt" style="display:block;margin:12px 0 5px;font-size:12px">Como você quer ouvir música hoje?</label>
+ <div style="display:flex;gap:8px;flex-wrap:wrap">
+  <input id="aggilliDjPrompt" maxlength="250" placeholder="Ex.: músicas calmas para trabalhar" style="flex:1;min-width:180px;margin:0;border-radius:8px" />
+  <button type="button" id="aggilliDjGenerate" style="border-radius:8px">Criar seleção</button>
+ </div>
+ <div id="aggilliDjChips" style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px">
+  <button type="button" data-dj="foco" style="padding:7px 11px;border-radius:8px">Foco</button>
+  <button type="button" data-dj="relaxar" style="padding:7px 11px;border-radius:8px">Relaxar</button>
+  <button type="button" data-dj="energia" style="padding:7px 11px;border-radius:8px">Energia</button>
+  <button type="button" data-dj="descoberta" style="padding:7px 11px;border-radius:8px">Descoberta</button>
+ </div>
+ <p id="aggilliDjStatus" role="status" aria-live="polite" style="font-size:12px;color:#b4c8c2"></p>
+ <div id="aggilliDjResults"></div>
+ <div style="font-size:11px;color:#a5b8b0;margin-top:10px">Recomendações locais por metadados. A integração conversacional com a ANI será habilitada após validar a API e as permissões comerciais.</div>
+</section>
  <div class="genres" id="genreCards"></div>
  <div class="library-bar"><h2 id="libraryHeading">Biblioteca musical</h2><div id="status">Carregando biblioteca...</div></div>
  <input id="search" placeholder="Pesquisar artista ou música..." aria-label="Pesquisar artista ou música" oninput="render()">
@@ -934,6 +955,66 @@ fetch('catalogo.json',{cache:'no-store'})
   }catch(error){status.textContent='Não foi possível iniciar: '+error.message}
   finally{button.disabled=false}
  });
+})();
+</script>
+<script>
+/* AGGILLI_INTEGRATED_DJ_V1 */
+(() => {
+ const prompt=document.getElementById('aggilliDjPrompt');
+ const generate=document.getElementById('aggilliDjGenerate');
+ const status=document.getElementById('aggilliDjStatus');
+ const results=document.getElementById('aggilliDjResults');
+ if(!prompt||!generate||!status||!results)return;
+ const moods={
+  foco:['instrumental','ambient','piano','classical','lofi','focus','study'],
+  relaxar:['relax','calm','ambient','meditation','new age','chill','soft'],
+  energia:['rock','dance','pop','electronic','energetic','upbeat','remix'],
+  descoberta:[]
+ };
+ function norm(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+ function detect(q){
+  const x=norm(q);
+  if(/foco|trabalh|estud|concentr/.test(x))return 'foco';
+  if(/relax|calm|tranquil|medit|dorm/.test(x))return 'relaxar';
+  if(/energia|trein|animad|festa/.test(x))return 'energia';
+  return 'descoberta';
+ }
+ function create(mood){
+  if(typeof tracks==='undefined'||!Array.isArray(tracks)||!tracks.length){status.textContent='Aguarde a biblioteca carregar.';return;}
+  const words=moods[mood]||[];
+  const recent=Array.isArray(playQueue)?new Set(playQueue.slice(-5)):new Set();
+  const ranked=tracks.filter(t=>t&&t.track_id&&t.download_url&&t.media).map(t=>{
+   const m=t.media||{};
+   const meta=norm([m.title,m.text,m.artist,m.genre].join(' '));
+   const matches=words.filter(w=>meta.includes(w));
+   return {t,score:matches.length*3-(recent.has(t.track_id)?2:0),matches};
+  }).sort((a,b)=>b.score-a.score||String(a.t.track_id).localeCompare(String(b.t.track_id))).slice(0,12);
+  results.replaceChildren();
+  if(!ranked.length){status.textContent='Nenhuma faixa disponível para esta seleção.';return;}
+  status.textContent=ranked.length+' músicas selecionadas em '+mood+'.';
+  const controls=document.createElement('div');controls.style.margin='10px 0';
+  const start=document.createElement('button');start.type='button';start.textContent='▶ Reproduzir seleção';start.style.borderRadius='8px';
+  start.addEventListener('click',()=>{
+   playQueue=ranked.map(x=>x.t.track_id);
+   if(typeof playTrack==='function')playTrack(ranked[0].t);
+  });
+  controls.append(start);results.append(controls);
+  ranked.forEach(({t,matches},i)=>{
+   const line=document.createElement('div');
+   line.style.cssText='display:flex;gap:8px;align-items:center;border-top:1px solid #355047;padding:8px 0';
+   const info=document.createElement('div');info.style.flex='1';
+   const title=document.createElement('strong');title.textContent=(i+1)+'. '+String(t.media.title||t.media.text||'Faixa');
+   title.style.cssText='display:block;font-size:12px';
+   const why=document.createElement('small');why.textContent=matches.length?'Combina com '+mood+': '+matches.join(', '):'Descoberta da biblioteca';
+   why.style.color='#9cbab1';info.append(title,why);
+   const play=document.createElement('button');play.type='button';play.textContent='▶';play.setAttribute('aria-label','Reproduzir '+title.textContent);
+   play.style.cssText='padding:6px 11px;border-radius:7px';
+   play.addEventListener('click',()=>{playQueue=ranked.map(x=>x.t.track_id);playTrack(t);});
+   line.append(info,play);results.append(line);
+  });
+ }
+ generate.addEventListener('click',()=>create(detect(prompt.value)));
+ document.querySelectorAll('#aggilliDjChips [data-dj]').forEach(b=>b.addEventListener('click',()=>{prompt.value=b.textContent;create(b.dataset.dj);}));
 })();
 </script>
 </body>
