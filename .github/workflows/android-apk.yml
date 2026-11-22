@@ -4,6 +4,8 @@ on:
     branches: [feat/nextcloud-webdav-sync]
     paths:
       - 'android/**'
+      - 'tests/**'
+      - 'integrations/nextcloud_azura/**'
       - '.github/workflows/android-apk.yml'
   workflow_dispatch:
 permissions:
@@ -23,6 +25,10 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platforms;android-35 build-tools;35.0.0'
+      - name: Validate synchronization Python code
+        run: |
+          python3 -m pip install httpx
+          python3 -m unittest discover -s tests -p 'test_stability.py' -v
       - name: Build installable debug APK
         working-directory: android
         run: gradle --no-daemon :app:assembleDebug
