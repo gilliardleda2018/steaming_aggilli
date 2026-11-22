@@ -428,10 +428,10 @@ function playRadio(){
  hideCloudVideo();
  playbackMode='radio';
  currentTrackId=null;
- audio.src='radio.mp3';
+ audio.src=cloudPreview?'https://server.taila400aa.ts.net/music/radio.mp3':'radio.mp3';
  document.getElementById('now').textContent='Aggilli Radio — Ao vivo';
  refreshNow();
- audio.play().catch(console.error);
+ audio.play().catch(e=>showPlaybackError(audio,e.message));
 }
 async function playTrack(track){
  const requestId=++playbackRequestId;
