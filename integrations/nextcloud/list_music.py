@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""List MP3 files from a Nextcloud WebDAV folder without modifying remote data.
+"""List MP3 and MP4 files from a Nextcloud WebDAV folder without modifying remote data.
 
 Environment:
   AGGILLI_WEBDAV_URL (optional, defaults to the music folder)
@@ -24,7 +24,7 @@ DEFAULT_URL = (
 DAV_NS = "{DAV:}"
 
 
-def list_mp3(url: str, username: str, password: str) -> list[dict]:
+def list_media(url: str, username: str, password: str) -> list[dict]:
     parsed = urllib.parse.urlsplit(url)
     if parsed.scheme != "https" or not parsed.hostname:
         raise ValueError("WebDAV URL must use HTTPS")
@@ -53,7 +53,7 @@ def list_mp3(url: str, username: str, password: str) -> list[dict]:
     for item in root.findall(f"{DAV_NS}response"):
         href = item.findtext(f"{DAV_NS}href") or ""
         name = urllib.parse.unquote(urllib.parse.urlsplit(href).path).rstrip("/").rsplit("/", 1)[-1]
-        if not name.lower().endswith(".mp3"):
+        if not name.lower().endswith((".mp3", ".mp4")):
             continue
         props = item.find(f".//{DAV_NS}prop")
         if props is None:
@@ -63,6 +63,7 @@ def list_mp3(url: str, username: str, password: str) -> list[dict]:
         size_text = props.findtext(f"{DAV_NS}getcontentlength")
         entries.append({
             "name": name,
+            "format": name.rsplit(".", 1)[-1].lower(),
             "size_bytes": int(size_text) if size_text and size_text.isdigit() else None,
             "etag": props.findtext(f"{DAV_NS}getetag"),
         })
@@ -76,7 +77,7 @@ def main() -> int:
         print("Missing AGGILLI_WEBDAV_USER or AGGILLI_WEBDAV_APP_PASSWORD", file=sys.stderr)
         return 2
     try:
-        entries = list_mp3(os.environ.get("AGGILLI_WEBDAV_URL", DEFAULT_URL), user, password)
+        entries = list_media(os.environ.get("AGGILLI_WEBDAV_URL", DEFAULT_URL), user, password)
     except urllib.error.HTTPError as exc:
         print(f"WebDAV returned HTTP {exc.code}", file=sys.stderr)
         return 1
