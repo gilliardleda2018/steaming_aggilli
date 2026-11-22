@@ -273,9 +273,7 @@ const localPreview=new URLSearchParams(location.search).has('localPreview');
 function activeMedia(){return !cloudVideo.hidden?cloudVideo:audio}
 function hideCloudVideo(){cloudVideo.pause();cloudVideo.removeAttribute('src');cloudVideo.load();cloudVideo.hidden=true;cloudVideo.style.display='none'}
 function mediaUrl(t){
- if(t.source==='local')return t.stream_url;
- if(t.source==='nextcloud')return '/cloud/'+encodeURIComponent(t.filename);
- return (cloudPreview||localPreview)?'https://server.taila400aa.ts.net/music/music-api'+t.download_url:'music-api'+t.download_url;
+ return 'music-api'+t.download_url;
 }
 function handlePlayRejection(media,error){
  if(media!==activeMedia()||media.paused&&playbackMode==='none')return;
@@ -472,7 +470,7 @@ function playRadio(){
  hideCloudVideo();
  playbackMode='radio';
  currentTrackId=null;
- audio.src=(cloudPreview||localPreview)?'https://server.taila400aa.ts.net/music/radio.mp3':'radio.mp3';
+ audio.src='radio.mp3';
  document.getElementById('now').textContent='Aggilli Radio — Ao vivo';
  refreshNow();
  audio.play().catch(e=>handlePlayRejection(audio,e));
@@ -490,19 +488,10 @@ async function playTrack(track){
    shuffleHistoryIndex=shuffleHistory.length-1;
   }
  }
- const isCloudVideo=(track.source==='nextcloud'||track.source==='local')&&track.format==='mp4';
+ const isCloudVideo=false;
  audio.pause();
  hideCloudVideo();
  let src=mediaUrl(track);
- if(track.source==='nextcloud'&&cloudPreview){
-  try{
-   document.getElementById('status').textContent='Autorizando reprodução da nuvem…';
-   src=await signedMediaUrl(track.filename);
-  }catch(error){
-   if(requestId===playbackRequestId)document.getElementById('status').textContent='Não foi possível autorizar a faixa: '+error.message;
-   return;
-  }
- }
  if(requestId!==playbackRequestId)return;
  if(isCloudVideo){
   audio.removeAttribute('src');audio.load();
@@ -614,26 +603,6 @@ fetch('catalogo.json',{cache:'no-store'})
  .then(r=>{if(!r.ok)throw Error(r.status);return r.json()})
  .then(async data=>{
   tracks=data;
-  if(localPreview){
-   try{
-    const response=await fetch('catalogo-local.json',{cache:'no-store'});
-    if(!response.ok)throw Error('Catálogo local HTTP '+response.status);
-    const local=await response.json();
-    if(!Array.isArray(local.tracks))throw Error('Formato de catálogo local inválido');
-    tracks=[...local.tracks,...data];
-   }catch(err){console.warn('Biblioteca local indisponível:',err)}
-  }
-  if(cloudPreview){
-   try{
-    const response=await fetch('/cloud-catalog',{cache:'no-store'});
-    if(!response.ok)throw Error('HTTP '+response.status);
-    const cloud=await response.json();
-    if(!Array.isArray(cloud.tracks))throw Error('Formato inválido');
-    tracks=[...cloud.tracks,...data];
-    // Warm up only the first item, not the entire private catalog.
-    if(cloud.tracks.length)preauthorizeTrack(cloud.tracks[0]);
-   }catch(err){console.warn('Nuvem indisponível, usando catálogo local:',err)}
-  }
   document.getElementById('totalTracks').textContent=tracks.length;
   try {
    const r=await fetch('generos.json',{cache:'no-store'});
