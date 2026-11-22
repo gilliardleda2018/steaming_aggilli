@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aggilli Music — Teste de streaming WebDAV</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#08121d;color:#e6f0fa}
+body{max-width:880px;margin:3rem auto;padding:0 1rem}
+h1{color:#38bdf8}input,button{font:inherit;padding:.8rem;border-radius:.6rem}
+input{width:min(100%,650px);box-sizing:border-box;background:#16283b;color:white;border:1px solid #44617b}
+button{margin-top:.7rem;background:#38bdf8;color:#071521;border:0;cursor:pointer;font-weight:700}
+video{width:100%;max-height:55vh;margin-top:1rem;background:#000;border-radius:.7rem}
+p,small{color:#a8bdd1}#status{min-height:1.5rem}
+</style>
+</head>
+<body>
+<h1>🎵 Aggilli Music — Laboratório WebDAV</h1>
+<p>Ambiente local de teste. O vídeo é transmitido por intervalos HTTP diretamente da nuvem, sem copiar o arquivo completo.</p>
+<label for="filename">Nome exato do MP3 ou MP4 na pasta musica</label>
+<div><input id="filename" value="007_Pink Floyd - Marooned (Official Music Video HD).mp4" autocomplete="off" spellcheck="false"></div>
+<button id="play" type="button">▶ Reproduzir da nuvem</button>
+<p id="status" role="status"></p>
+<video id="media" controls playsinline preload="metadata"></video>
+<p><small>Somente para teste autenticado. Se o codec do MP4 não for compatível com o navegador, o vídeo poderá não tocar.</small></p>
+<script>
+const filename=document.getElementById('filename');
+const video=document.getElementById('media');
+const status=document.getElementById('status');
+document.getElementById('play').addEventListener('click',()=>{
+  const name=filename.value.trim();
+  if(!/\.(mp3|mp4)$/i.test(name)||name.includes('/')||name.includes('\\')){
+    status.textContent='Informe o nome de um MP3 ou MP4 válido.';return;
+  }
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
+  video.src='/cloud/'+encodeURIComponent(name);
+  status.textContent='Carregando metadados da nuvem…';
+  video.play().catch(()=>{status.textContent='Pressione Play no vídeo ou verifique o formato e a autenticação.';});
+});
+video.addEventListener('loadedmetadata',()=>status.textContent='Metadados carregados; reprodução disponível.');
+video.addEventListener('error',()=>status.textContent='Erro de reprodução. Verifique credenciais, HTTP Range e codec no navegador.');
+</script>
+</body></html>
