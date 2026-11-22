@@ -271,7 +271,17 @@ const cloudVideo=document.getElementById('cloudVideo');
 const cloudPreview=new URLSearchParams(location.search).has('cloudPreview');
 function activeMedia(){return !cloudVideo.hidden?cloudVideo:audio}
 function hideCloudVideo(){cloudVideo.pause();cloudVideo.removeAttribute('src');cloudVideo.load();cloudVideo.hidden=true;cloudVideo.style.display='none'}
-function mediaUrl(t){return t.source==='nextcloud'?'/cloud/'+encodeURIComponent(t.filename):'music-api'+t.download_url}
+function mediaUrl(t){
+ if(t.source==='nextcloud')return '/cloud/'+encodeURIComponent(t.filename);
+ return cloudPreview?'https://server.taila400aa.ts.net/music/music-api'+t.download_url:'music-api'+t.download_url;
+}
+function showPlaybackError(media,reason){
+ const code=media.error?.code;
+ const details={1:'reprodução interrompida',2:'falha de rede ou autenticação',3:'formato ou codec incompatível',4:'origem indisponível ou formato não suportado'};
+ const message=reason||details[code]||'não foi possível iniciar';
+ document.getElementById('status').textContent='Falha na reprodução: '+message;
+ console.warn('Aggilli playback', {code,src:media.currentSrc,reason});
+}
 let tracks=[];
 let currentTrackId=null;
 let playQueue=[];
@@ -377,7 +387,7 @@ function resumeAudio(){
   playRadio();
   return;
  }
- media.play().catch(console.error);
+ media.play().catch(e=>showPlaybackError(media,e.message));
 }
 function pauseAudio(){
  activeMedia().pause();
@@ -428,7 +438,7 @@ function playTrack(track){
  const parts=trackArtistTitle(track);
  document.getElementById('now').textContent=parts.artist+' — '+parts.title;
  refreshNow();
- activeMedia().play().catch(console.error);
+ activeMedia().play().catch(e=>showPlaybackError(activeMedia(),e.message));
 }
 
 function formatTime(seconds){
@@ -513,7 +523,8 @@ audio.addEventListener('play',()=>{document.getElementById('mainPlay').textConte
 cloudVideo.addEventListener('play',()=>{audio.pause();document.getElementById('mainPlay').textContent='⏸';refreshNow()});
 audio.addEventListener('pause',()=>{if(activeMedia()===audio)document.getElementById('mainPlay').textContent='▶'});
 cloudVideo.addEventListener('pause',()=>{if(activeMedia()===cloudVideo)document.getElementById('mainPlay').textContent='▶'});
-cloudVideo.addEventListener('error',()=>{if(!cloudVideo.hidden)document.getElementById('status').textContent='Vídeo indisponível: verifique autenticação ou codec MP4.'});
+cloudVideo.addEventListener('error',()=>{if(!cloudVideo.hidden)showPlaybackError(cloudVideo)});
+audio.addEventListener('error',()=>{if(activeMedia()===audio&&audio.getAttribute('src'))showPlaybackError(audio)});
 document.getElementById('seek').addEventListener('input',e=>{const m=activeMedia();if(Number.isFinite(m.duration)&&m.duration>0)m.currentTime=Number(e.target.value)/1000*m.duration});
 audio.addEventListener('ended',()=>{
  if(playbackMode==='track') nextTrack();
