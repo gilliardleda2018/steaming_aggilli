@@ -637,6 +637,9 @@ fetch('catalogo.json',{cache:'no-store'})
 (function(){
   'use strict';
   const player=document.getElementById('audio');
+  const videoPlayer=document.getElementById('cloudVideo');
+  const mediaElements=[player,videoPlayer];
+  const activePlayer=()=>videoPlayer.hidden?player:videoPlayer;
   const volume=document.getElementById('aggilliVolume');
   const volumeValue=document.getElementById('aggilliVolumeValue');
   const mute=document.getElementById('aggilliMute');
@@ -653,14 +656,14 @@ fetch('catalogo.json',{cache:'no-store'})
   function save(key,value){try{localStorage.setItem(key,String(value));}catch(e){}}
   function setVolume(value){
     const v=Math.max(0,Math.min(100,Number(value)||0));
-    player.volume=v/100;volume.value=String(v);volumeValue.textContent=v+'%';
-    mute.textContent=player.muted||v===0?'🔇':'🔊';
-    mute.setAttribute('aria-label',player.muted?'Ativar som':'Silenciar');
+    mediaElements.forEach(media=>{media.volume=v/100});volume.value=String(v);volumeValue.textContent=v+'%';
+    mute.textContent=activePlayer().muted||v===0?'🔇':'🔊';
+    mute.setAttribute('aria-label',activePlayer().muted?'Ativar som':'Silenciar');
     save('aggilli-volume',v);
   }
   setVolume(readVolume());
-  volume.addEventListener('input',()=>{player.muted=false;setVolume(volume.value)});
-  mute.addEventListener('click',()=>{player.muted=!player.muted;setVolume(volume.value)});
+  volume.addEventListener('input',()=>{mediaElements.forEach(media=>{media.muted=false});setVolume(volume.value)});
+  mute.addEventListener('click',()=>{const muted=!activePlayer().muted;mediaElements.forEach(media=>{media.muted=muted});setVolume(volume.value)});
   toggle.addEventListener('click',()=>{panel.hidden=!panel.hidden;toggle.setAttribute('aria-expanded',String(!panel.hidden))});
   function updateBands(values){
     bands.forEach((name,i)=>{
@@ -690,11 +693,12 @@ fetch('catalogo.json',{cache:'no-store'})
     try{
       if(!context){
         context=new AudioContextClass();
-        const source=context.createMediaElementSource(player);
+        const audioSource=context.createMediaElementSource(player);
+        const videoSource=context.createMediaElementSource(videoPlayer);
         const low=context.createBiquadFilter();low.type='lowshelf';low.frequency.value=180;
         const mid=context.createBiquadFilter();mid.type='peaking';mid.frequency.value=1000;mid.Q.value=0.8;
         const high=context.createBiquadFilter();high.type='highshelf';high.frequency.value=4500;
-        source.connect(low);low.connect(mid);mid.connect(high);analyser=context.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=0.78;
+        audioSource.connect(low);videoSource.connect(low);low.connect(mid);mid.connect(high);analyser=context.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=0.78;
          high.connect(analyser);analyser.connect(context.destination);
          initSpectrum();
         filters=[low,mid,high];updateBands(currentBands());
@@ -727,7 +731,7 @@ fetch('catalogo.json',{cache:'no-store'})
        ctx.fillStyle='#07110d';ctx.fillRect(0,0,w,h);
        ctx.strokeStyle='rgba(66,125,82,.12)';ctx.lineWidth=dpr;
        for(let y=0;y<h;y+=24*dpr){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
-       const active=context.state==='running'&&!player.paused;
+       const active=context.state==='running'&&!activePlayer().paused;
        if(active)analyser.getByteFrequencyData(bins);else bins.fill(0);
        const count=Math.max(16,Math.min(92,Math.floor(rect.width/9)));
        const slot=w/count,barW=Math.max(2*dpr,slot-2*dpr);
@@ -760,6 +764,8 @@ fetch('catalogo.json',{cache:'no-store'})
     if((e.key==='Enter'||e.key===' ')&&e.target.closest('.winamp-row,.music-controls'))void activate();
   },{capture:true});
   player.addEventListener('play',()=>{void activate()});
+  videoPlayer.addEventListener('play',()=>{void activate()});
+  videoPlayer.addEventListener('volumechange',()=>{if(!videoPlayer.hidden){volume.value=String(Math.round(videoPlayer.volume*100));volumeValue.textContent=volume.value+'%';mute.textContent=videoPlayer.muted?'🔇':'🔊'}});
 })();
 </script>
 
