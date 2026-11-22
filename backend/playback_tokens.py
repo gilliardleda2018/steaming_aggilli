@@ -8,7 +8,7 @@ import hashlib
 import hmac
 import os
 import time
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from main import require_upload_auth
 from cloud_stream import remote_url, proxy_media
@@ -44,6 +44,7 @@ async def playback_token(request: PlaybackRequest):
     return {"expires": expires, "token": signature(request.filename, expires, secret())}
 
 @router.get("/signed-cloud/{filename}")
-async def signed_stream(filename: str, expires: int, token: str, range: str | None = None):
-    # The browser sends Range in the header, not as a query argument.
-    raise HTTPException(405, detail="Use HTTP Range header")
+@router.head("/signed-cloud/{filename}")
+async def signed_stream(filename: str, expires: int, token: str, range: str | None = Header(default=None)):
+    verify(filename, expires, token)
+    return await proxy_media(filename, "GET", range)
