@@ -1136,7 +1136,7 @@ fetch('catalogo.json',{cache:'no-store'})
 <script>
 /* AGGILLI_MEDIA_SESSION_V1 */
 (() => {
- if(!('mediaSession' in navigator))return;
+ if(!('mediaSession' in navigator)||!('MediaMetadata' in window))return;
  const media=navigator.mediaSession;
  function update(){
   const track=typeof tracks!=='undefined'&&Array.isArray(tracks)?tracks.find(t=>t.track_id===currentTrackId):null;
