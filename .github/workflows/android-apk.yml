@@ -28,7 +28,7 @@ jobs:
           packages: 'platforms;android-35 build-tools;35.0.0'
       - name: Validate synchronization Python code
         run: |
-          python3 -m pip install httpx
+          python3 -m pip install httpx fastapi python-multipart bcrypt
           python3 -m unittest discover -s tests -p 'test_*.py' -v
       - name: Build installable debug APK
         working-directory: android
