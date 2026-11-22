@@ -287,7 +287,12 @@ async function showPlaybackError(media,reason){
   const response=await fetch(source,{headers:{Range:'bytes=0-1023'},cache:'no-store',credentials:'same-origin'});
   const type=response.headers.get('content-type')||'desconhecido';
   const contentRange=response.headers.get('content-range')||'ausente';
-  const info='HTTP '+response.status+' · '+type+' · Range '+(contentRange==='ausente'?'ausente':'presente');
+  const path=new URL(source,location.href).pathname;
+  let detail='';
+  if(!response.ok&&type.includes('json')){
+   try{const body=await response.json();detail=String(body.detail||'').slice(0,110)}catch(_){}
+  }
+  const info='HTTP '+response.status+' · '+type+' · Range '+(contentRange==='ausente'?'ausente':'presente')+' · rota '+path+(detail?' · '+detail:'');
   status.textContent='Falha na reprodução: '+message+' ('+info+')';
   console.warn('Aggilli media diagnostic',{code,http:response.status,type,contentRangePresent:contentRange!=='ausente',readyState:media.readyState,networkState:media.networkState,reason});
  }catch(error){
