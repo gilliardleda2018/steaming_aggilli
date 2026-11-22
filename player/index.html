@@ -1064,7 +1064,13 @@ fetch('catalogo.json',{cache:'no-store'})
    button.style.cssText='padding:6px 11px;border-radius:7px';
    button.setAttribute('aria-label','Reproduzir '+parts.title);
    button.addEventListener('click',()=>playTrack(track));
-   line.append(label,button);items.append(line);
+   const up=document.createElement('button');up.type='button';up.textContent='↑';up.title='Mover para cima';up.setAttribute('aria-label','Mover '+parts.title+' para cima');up.style.cssText='padding:6px 9px;border-radius:7px';up.disabled=index===0;
+   up.addEventListener('click',()=>{const a=playQueue.indexOf(track.track_id);if(a>0){[playQueue[a-1],playQueue[a]]=[playQueue[a],playQueue[a-1]];window.aggilliRenderQueue();}});
+   const down=document.createElement('button');down.type='button';down.textContent='↓';down.title='Mover para baixo';down.setAttribute('aria-label','Mover '+parts.title+' para baixo');down.style.cssText='padding:6px 9px;border-radius:7px';down.disabled=index===available.length-1;
+   down.addEventListener('click',()=>{const a=playQueue.indexOf(track.track_id);if(a>=0&&a<playQueue.length-1){[playQueue[a],playQueue[a+1]]=[playQueue[a+1],playQueue[a]];window.aggilliRenderQueue();}});
+   const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.title='Remover da fila';remove.setAttribute('aria-label','Remover '+parts.title+' da fila');remove.style.cssText='padding:6px 9px;border-radius:7px';
+   remove.addEventListener('click',()=>{playQueue=playQueue.filter(id=>id!==track.track_id);if(currentTrackId===track.track_id&&playbackMode==='track'){stopAudio();currentTrackId=null;}window.aggilliRenderQueue();});
+   line.append(label,button,up,down,remove);items.append(line);
   });
  };
  library.addEventListener('click',()=>{
@@ -1125,6 +1131,41 @@ fetch('catalogo.json',{cache:'no-store'})
   }catch(error){status.textContent=error.message;}
   finally{run.disabled=false;}
  });
+})();
+</script>
+<script>
+/* AGGILLI_MEDIA_SESSION_V1 */
+(() => {
+ if(!('mediaSession' in navigator))return;
+ const media=navigator.mediaSession;
+ function update(){
+  const track=typeof tracks!=='undefined'&&Array.isArray(tracks)?tracks.find(t=>t.track_id===currentTrackId):null;
+  if(playbackMode==='radio'){
+   media.metadata=new MediaMetadata({title:'Aggilli Radio — Ao vivo',artist:'Aggilli Music',album:'Rádio'});
+  }else if(track){
+   const parts=trackArtistTitle(track);
+   media.metadata=new MediaMetadata({title:parts.title,artist:parts.artist,album:'Aggilli Music'});
+  }else{
+   media.metadata=null;
+  }
+  media.playbackState=activeMedia().paused?'paused':'playing';
+ }
+ for(const event of ['play','pause','ended','loadedmetadata']){
+  audio.addEventListener(event,update);
+  cloudVideo.addEventListener(event,update);
+ }
+ for(const [action,fn] of Object.entries({
+  play:()=>resumeAudio(),pause:()=>pauseAudio(),
+  previoustrack:()=>previousTrack(),nexttrack:()=>nextTrack(),
+  stop:()=>stopAudio()
+ })){
+  try{media.setActionHandler(action,fn);}catch(_){}
+ }
+ if('MediaMetadata' in window){
+  const original=window.refreshNow;
+  if(typeof original==='function')window.refreshNow=function(){original();update();};
+ }
+ update();
 })();
 </script>
 </body>
