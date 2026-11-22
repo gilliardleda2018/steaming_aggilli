@@ -187,7 +187,7 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
 </head>
 <body>
 <main>
- <div class="app-head"><img class="app-logo" src="aggilli-music-logo.jpg" alt="Logomarca oficial Aggilli Music" width="72" height="72"><div><strong>AGGILLI MUSIC</strong><small>PLAYLIST EDITOR · <span id="totalTracks">36</span> FAIXAS</small></div></div>
+ <div class="app-head"><img class="app-logo" src="aggilli-music-logo.jpg?v=2" alt="Logomarca oficial Aggilli Music" width="72" height="72"><div><strong>AGGILLI MUSIC</strong><small>PLAYLIST EDITOR · <span id="totalTracks">36</span> FAIXAS</small></div></div>
  <section class="player" aria-label="Reprodutor de música">
   <div class="now-label">REPRODUZINDO AGORA</div>
   <div id="now" class="now-line" aria-live="polite">Selecione uma música</div>
@@ -249,7 +249,7 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
   <button type="button" data-dj="descoberta" style="padding:7px 11px;border-radius:8px">Descoberta</button>
  </div>
  <p id="aggilliDjStatus" role="status" aria-live="polite" style="font-size:12px;color:#b4c8c2"></p>
- <div id="aggilliDjResults"></div>
+ <div id="aggilliDjResults" style="max-height:280px;overflow:auto"></div>
  <details id="aggilliDjCommercial" style="margin:10px 0;border-top:1px solid #355047;padding-top:10px">
  <summary style="cursor:pointer;font-size:12px;color:#b8dfd0">Conectar DJ ANI comercial (homologação)</summary>
  <p style="font-size:11px;color:#a5b8b0">Apenas HTTPS. Token temporário mantido nesta página. Músicas comerciais ainda não são reproduzidas pelo player público.</p>
@@ -264,7 +264,7 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
  <div style="font-size:11px;color:#a5b8b0;margin-top:10px">Recomendações locais por metadados. A integração conversacional com a ANI será habilitada após validar a API e as permissões comerciais.</div>
 </section>
 <!-- AGGILLI_UNIFIED_QUEUE_V1 -->
-<section id="aggilliQueuePanel" aria-label="Fila de reprodução" style="margin:12px 0;padding:14px;border:1px solid #37564b;border-radius:12px;background:#101d1b;color:#eafff4">
+<section id="aggilliQueuePanel" hidden aria-label="Fila de reprodução" style="margin:12px 0;padding:14px;border:1px solid #37564b;border-radius:12px;background:#101d1b;color:#eafff4">
  <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
   <strong>♫ Próximas músicas</strong>
   <button id="aggilliQueueLibrary" type="button" style="padding:7px 11px;border-radius:7px">Voltar à biblioteca</button>
@@ -1025,7 +1025,7 @@ fetch('catalogo.json',{cache:'no-store'})
   controls.append(start);results.append(controls);
   ranked.forEach(({t,matches},i)=>{
    const line=document.createElement('div');
-   line.style.cssText='display:flex;gap:8px;align-items:center;border-top:1px solid #355047;padding:8px 0';
+   line.style.cssText='display:flex;gap:8px;align-items:center;border-top:1px solid #355047;padding:8px 0;cursor:pointer';
    const info=document.createElement('div');info.style.flex='1';
    const title=document.createElement('strong');title.textContent=(i+1)+'. '+String(t.media.title||t.media.text||'Faixa');
    title.style.cssText='display:block;font-size:12px';
@@ -1051,6 +1051,7 @@ fetch('catalogo.json',{cache:'no-store'})
  const library=document.getElementById('aggilliQueueLibrary');
  if(!items||!status||!library)return;
  window.aggilliRenderQueue=function(){
+  document.getElementById("aggilliQueuePanel").hidden=!aggilliDjQueueActive;
   items.replaceChildren();
   if(typeof playQueue==='undefined'||!Array.isArray(playQueue))return;
   const available=playQueue.map(id=>tracks.find(t=>t.track_id===id)).filter(Boolean);
@@ -1072,7 +1073,7 @@ fetch('catalogo.json',{cache:'no-store'})
    down.addEventListener('click',()=>{const a=playQueue.indexOf(track.track_id);if(a>=0&&a<playQueue.length-1){[playQueue[a],playQueue[a+1]]=[playQueue[a+1],playQueue[a]];window.aggilliRenderQueue();}});
    const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.title='Remover da fila';remove.setAttribute('aria-label','Remover '+parts.title+' da fila');remove.style.cssText='padding:6px 9px;border-radius:7px';
    remove.addEventListener('click',()=>{playQueue=playQueue.filter(id=>id!==track.track_id);if(currentTrackId===track.track_id&&playbackMode==='track'){stopAudio();currentTrackId=null;}window.aggilliRenderQueue();});
-   line.append(label,up,down,remove);items.append(line);
+   line.append(label);items.append(line);
   });
  };
  library.addEventListener('click',()=>{
