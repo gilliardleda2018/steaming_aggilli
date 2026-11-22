@@ -80,16 +80,14 @@ async def proxy_media(filename: str, method: str, range_header: str | None):
         upstream = await client.send(request, stream=True)
     except httpx.HTTPError:
         if own_client:
-            if own_client:
-                await client.aclose()
+            await client.aclose()
         raise HTTPException(502, detail="Cloud storage unavailable")
 
     if upstream.status_code not in {200, 206}:
         status = upstream.status_code
         await upstream.aclose()
         if own_client:
-            if own_client:
-                await client.aclose()
+            await client.aclose()
         if status == 404:
             raise HTTPException(404, detail="Media not found")
         if status in {401, 403}:
@@ -102,8 +100,7 @@ async def proxy_media(filename: str, method: str, range_header: str | None):
     if range_header and upstream.status_code != 206:
         await upstream.aclose()
         if own_client:
-            if own_client:
-                await client.aclose()
+            await client.aclose()
         raise HTTPException(502, detail="Cloud storage did not honor byte range")
 
     response_headers = {
@@ -115,8 +112,7 @@ async def proxy_media(filename: str, method: str, range_header: str | None):
     if method == "HEAD":
         await upstream.aclose()
         if own_client:
-            if own_client:
-                await client.aclose()
+            await client.aclose()
         from fastapi import Response
         return Response(status_code=upstream.status_code, headers=response_headers)
 
@@ -127,8 +123,7 @@ async def proxy_media(filename: str, method: str, range_header: str | None):
         finally:
             await upstream.aclose()
             if own_client:
-            if own_client:
-                await client.aclose()
+            await client.aclose()
 
     return StreamingResponse(
         stream(),
