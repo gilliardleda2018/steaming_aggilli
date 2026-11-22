@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from commercial.listeners import ListenerStore
 from commercial.registry import RightsRegistry
 from commercial.entitlements import allowed_to_play
+from commercial.ani_dj import build_session
 
 app = FastAPI(title="Aggilli Music Commercial Staging", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -113,3 +114,46 @@ def update_subscription(payload: SubscriptionInput):
     except ValueError:
         raise HTTPException(422, "Invalid subscription")
     return {"success": True}
+
+
+class DjRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=400)
+    territory: str = Field(default="BR", min_length=2, max_length=2)
+    limit: int = Field(default=10, ge=1, le=50)
+
+
+@app.post("/listeners/dj/session")
+def dj_session(payload: DjRequest, listener=Depends(current_listener)):
+    """AI-ready session planner. Does not serve media or expose public tracks.
+
+    The catalog is a separately provisioned, rights-reviewed staging snapshot.
+    Listener access and billing are always verified server-side.
+    """
+    from datetime import date
+    import json
+    catalog_path = Path(os.environ.get(
+        "AGGILLI_COMMERCIAL_CATALOG_FILE",
+        "/var/lib/aggilli-music-commercial/catalog.json",
+    ))
+    if not catalog_path.exists():
+        raise HTTPException(503, "Licensed staging catalog not configured")
+    try:
+        tracks = json.loads(catalog_path.read_text(encoding="utf-8"))
+        if not isinstance(tracks, list) or len(tracks) > 10000:
+            raise ValueError("Invalid catalog")
+        subscription = store().subscription(listener["id"])
+        if not subscription or subscription.get("status") not in {"active", "trialing"}:
+            raise HTTPException(403, "Active subscription required")
+        if subscription.get("plan") not in {"premium", "family"}:
+            raise HTTPException(403, "Premium subscription required")
+        from datetime import datetime, timezone
+        expiry = datetime.fromisoformat(subscription["access_until"].replace("Z", "+00:00"))
+        if expiry.tzinfo is None or expiry <= datetime.now(timezone.utc):
+            raise HTTPException(403, "Subscription expired")
+        return build_session(
+            payload.prompt, tracks, registry().read(), payload.territory.upper(),
+            limit=payload.limit,
+            model_enabled=os.environ.get("AGGILLI_ANI_ENABLED", "false").lower() == "true",
+        )
+    except (ValueError, TypeError, KeyError, OSError, json.JSONDecodeError):
+        raise HTTPException(503, "Commercial catalog unavailable")
