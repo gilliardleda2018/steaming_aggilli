@@ -35,7 +35,7 @@ class FakeClient:
         self.closed = False
         self.request = None
 
-    def build_request(self, method, url, headers=None):
+    def build_request(self, method, url, headers=None, auth=None):
         self.request = (method, url, headers)
         return self.request
 
