@@ -275,6 +275,11 @@ function mediaUrl(t){
  if(t.source==='nextcloud')return '/cloud/'+encodeURIComponent(t.filename);
  return cloudPreview?'https://server.taila400aa.ts.net/music/music-api'+t.download_url:'music-api'+t.download_url;
 }
+function handlePlayRejection(media,error){
+ // Switching tracks intentionally pauses the previous pending play() call.
+ if(error?.name==='AbortError'||/play\(\) request was interrupted/i.test(error?.message||''))return;
+ void showPlaybackError(media,error?.message||String(error));
+}
 async function showPlaybackError(media,reason){
  const code=media.error?.code;
  const details={1:'reprodução interrompida',2:'falha de rede ou autenticação',3:'formato ou codec incompatível',4:'origem indisponível ou formato não suportado'};
@@ -405,7 +410,7 @@ function resumeAudio(){
   playRadio();
   return;
  }
- media.play().catch(e=>showPlaybackError(media,e.message));
+ media.play().catch(e=>handlePlayRejection(media,e));
 }
 function pauseAudio(){
  activeMedia().pause();
@@ -431,7 +436,7 @@ function playRadio(){
  audio.src=cloudPreview?'https://server.taila400aa.ts.net/music/radio.mp3':'radio.mp3';
  document.getElementById('now').textContent='Aggilli Radio — Ao vivo';
  refreshNow();
- audio.play().catch(e=>showPlaybackError(audio,e.message));
+ audio.play().catch(e=>handlePlayRejection(audio,e));
 }
 async function playTrack(track){
  const requestId=++playbackRequestId;
@@ -477,7 +482,8 @@ async function playTrack(track){
  const parts=trackArtistTitle(track);
  document.getElementById('now').textContent=parts.artist+' — '+parts.title;
  refreshNow();
- activeMedia().play().catch(e=>showPlaybackError(activeMedia(),e.message));
+ const selected=activeMedia();
+ selected.play().catch(e=>handlePlayRejection(selected,e));
 }
 
 function formatTime(seconds){
