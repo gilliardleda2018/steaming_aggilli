@@ -276,11 +276,14 @@ function mediaUrl(t){
  return cloudPreview?'https://server.taila400aa.ts.net/music/music-api'+t.download_url:'music-api'+t.download_url;
 }
 function handlePlayRejection(media,error){
+ if(media!==activeMedia()||media.paused&&playbackMode==='none')return;
  // Switching tracks intentionally pauses the previous pending play() call.
  if(error?.name==='AbortError'||/play\(\) request was interrupted/i.test(error?.message||''))return;
  void showPlaybackError(media,error?.message||String(error));
 }
 async function showPlaybackError(media,reason){
+ const requestId=playbackRequestId;
+ if(media!==activeMedia())return;
  const code=media.error?.code;
  const details={1:'reprodução interrompida',2:'falha de rede ou autenticação',3:'formato ou codec incompatível',4:'origem indisponível ou formato não suportado'};
  const status=document.getElementById('status');
@@ -298,9 +301,11 @@ async function showPlaybackError(media,reason){
    try{const body=await response.json();detail=String(body.detail||'').slice(0,110)}catch(_){}
   }
   const info='HTTP '+response.status+' · '+type+' · Range '+(contentRange==='ausente'?'ausente':'presente')+' · rota '+path+(detail?' · '+detail:'');
+  if(requestId!==playbackRequestId||media!==activeMedia()||source!==(media.currentSrc||media.src))return;
   status.textContent='Falha na reprodução: '+message+' ('+info+')';
   console.warn('Aggilli media diagnostic',{code,http:response.status,type,contentRangePresent:contentRange!=='ausente',readyState:media.readyState,networkState:media.networkState,reason});
  }catch(error){
+  if(requestId!==playbackRequestId||media!==activeMedia())return;
   status.textContent='Falha na reprodução: '+message+' (diagnóstico de rede: '+error.message+')';
  }
 }
@@ -430,6 +435,7 @@ function stopAudio(){
 }
 function playRadio(){
  playbackRequestId++;
+ document.getElementById('status').textContent='Rádio ao vivo';
  hideCloudVideo();
  playbackMode='radio';
  currentTrackId=null;
@@ -440,6 +446,7 @@ function playRadio(){
 }
 async function playTrack(track){
  const requestId=++playbackRequestId;
+ document.getElementById('status').textContent='Carregando faixa…';
  playbackMode='track';
  currentTrackId=track.track_id;
  if(shuffleEnabled){
