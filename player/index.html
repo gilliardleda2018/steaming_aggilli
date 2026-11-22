@@ -309,6 +309,37 @@ async function showPlaybackError(media,reason){
   status.textContent='Falha na reprodução: '+message+' (diagnóstico de rede: '+error.message+')';
  }
 }
+// Cache only short-lived signed URLs in memory, never Nextcloud credentials.
+const signedMediaCache=new Map();
+const signedMediaPending=new Map();
+const SIGNED_URL_MARGIN_SECONDS=45;
+async function signedMediaUrl(filename){
+ const existing=signedMediaCache.get(filename);
+ if(existing&&existing.expires>Date.now()/1000+SIGNED_URL_MARGIN_SECONDS)return existing.url;
+ if(signedMediaPending.has(filename))return signedMediaPending.get(filename);
+ const pending=(async()=>{
+  const started=performance.now();
+  const response=await fetch('/playback-token',{
+   method:'POST',credentials:'same-origin',cache:'no-store',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({filename})
+  });
+  if(!response.ok)throw Error('Token HTTP '+response.status);
+  const signed=await response.json();
+  if(!signed.token||!Number.isFinite(Number(signed.expires)))throw Error('Resposta de token inválida');
+  const url='/signed-cloud/'+encodeURIComponent(filename)+'?expires='+encodeURIComponent(signed.expires)+'&token='+encodeURIComponent(signed.token);
+  signedMediaCache.set(filename,{url,expires:Number(signed.expires)});
+  if(signedMediaCache.size>20)signedMediaCache.delete(signedMediaCache.keys().next().value);
+  console.info('Aggilli: autorização de mídia (ms)',Math.round(performance.now()-started));
+  return url;
+ })();
+ signedMediaPending.set(filename,pending);
+ try{return await pending}finally{signedMediaPending.delete(filename)}
+}
+function preauthorizeTrack(track){
+ if(!cloudPreview||track.source!=='nextcloud')return;
+ void signedMediaUrl(track.filename).catch(()=>{});
+}
 let playbackRequestId=0;
 let tracks=[];
 let currentTrackId=null;
@@ -464,15 +495,7 @@ async function playTrack(track){
  if(track.source==='nextcloud'&&cloudPreview){
   try{
    document.getElementById('status').textContent='Autorizando reprodução da nuvem…';
-   const response=await fetch('/playback-token',{
-    method:'POST',credentials:'same-origin',cache:'no-store',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({filename:track.filename})
-   });
-   if(!response.ok)throw new Error('Token HTTP '+response.status);
-   const signed=await response.json();
-   if(!signed.token||!signed.expires)throw new Error('Resposta de token inválida');
-   src='/signed-cloud/'+encodeURIComponent(track.filename)+'?expires='+encodeURIComponent(signed.expires)+'&token='+encodeURIComponent(signed.token);
+   src=await signedMediaUrl(track.filename);
   }catch(error){
    if(requestId===playbackRequestId)document.getElementById('status').textContent='Não foi possível autorizar a faixa: '+error.message;
    return;
@@ -548,7 +571,10 @@ function render(){
   select.onchange=e=>{e.stopPropagation();genres[t.track_id]=select.value;localStorage.setItem('aggilli-generos',JSON.stringify(genres));drawGenres();render();refreshNow()};
   info.append(artist,title,select);
   const duration=document.createElement('span');duration.className='winamp-duration';duration.textContent=trackSeconds(t)===null?'--:--':formatTime(trackSeconds(t));
-  row.append(num,info,duration);row.onclick=()=>playTrack(t);
+  row.append(num,info,duration);
+  row.addEventListener('pointerenter',()=>preauthorizeTrack(t),{once:true});
+  row.addEventListener('focusin',()=>preauthorizeTrack(t),{once:true});
+  row.onclick=()=>playTrack(t);
   row.onkeydown=e=>{if(e.target===row&&(e.key==='Enter'||e.key===' ')){e.preventDefault();playTrack(t)}};
   box.append(row);
  });
@@ -593,6 +619,8 @@ fetch('catalogo.json',{cache:'no-store'})
     const cloud=await response.json();
     if(!Array.isArray(cloud.tracks))throw Error('Formato inválido');
     tracks=[...cloud.tracks,...data];
+    // Warm up only the first item, not the entire private catalog.
+    if(cloud.tracks.length)preauthorizeTrack(cloud.tracks[0]);
    }catch(err){console.warn('Nuvem indisponível, usando catálogo local:',err)}
   }
   document.getElementById('totalTracks').textContent=tracks.length;
