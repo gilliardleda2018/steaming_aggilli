@@ -187,7 +187,7 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
 </head>
 <body>
 <main>
- <div class="app-head"><img class="app-logo" src="aggilli-music-logo.jpg?v=2" alt="Logomarca oficial Aggilli Music" width="72" height="72"><div><strong>AGGILLI MUSIC</strong><small>PLAYLIST EDITOR · <span id="totalTracks">36</span> FAIXAS</small></div></div>
+ <div class="app-head"><img class="app-logo" src="aggilli-music-logo.jpg?v=3" alt="Logomarca oficial Aggilli Music" width="72" height="72"><div><strong>AGGILLI MUSIC</strong><small>PLAYLIST EDITOR · <span id="totalTracks">36</span> FAIXAS</small></div></div>
  <section class="player" aria-label="Reprodutor de música">
   <div class="now-label">REPRODUZINDO AGORA</div>
   <div id="now" class="now-line" aria-live="polite">Selecione uma música</div>
@@ -1015,7 +1015,7 @@ fetch('catalogo.json',{cache:'no-store'})
   if(!ranked.length){status.textContent='Nenhuma faixa disponível para esta seleção.';return;}
   status.textContent=ranked.length+' músicas selecionadas em '+mood+'.';
   const controls=document.createElement('div');controls.style.margin='10px 0';
-  const start=document.createElement('button');start.type='button';start.textContent='▶ Reproduzir seleção';start.style.borderRadius='8px';
+  const start=document.createElement('button');start.type='button';start.textContent='Ouvir seleção';start.style.borderRadius='8px';
   start.addEventListener('click',()=>{
    aggilliDjQueueActive=true;
    playQueue=ranked.map(x=>x.t.track_id);
@@ -1051,7 +1051,7 @@ fetch('catalogo.json',{cache:'no-store'})
  const library=document.getElementById('aggilliQueueLibrary');
  if(!items||!status||!library)return;
  window.aggilliRenderQueue=function(){
-  document.getElementById("aggilliQueuePanel").hidden=!aggilliDjQueueActive;
+  document.getElementById('aggilliQueuePanel').hidden=!aggilliDjQueueActive;
   items.replaceChildren();
   if(typeof playQueue==='undefined'||!Array.isArray(playQueue))return;
   const available=playQueue.map(id=>tracks.find(t=>t.track_id===id)).filter(Boolean);
