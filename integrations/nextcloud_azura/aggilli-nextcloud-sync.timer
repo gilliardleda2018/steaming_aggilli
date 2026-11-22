@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Nextcloud music folder every 15 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=15min
+Persistent=true
+Unit=aggilli-nextcloud-sync.service
+
+[Install]
+WantedBy=timers.target
