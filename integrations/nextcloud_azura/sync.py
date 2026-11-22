@@ -69,6 +69,27 @@ def normalized_filename(name):
     return re.sub(r'[^a-z0-9]+', '_', Path(ascii_name).stem.lower()).strip('_')
 
 
+def assign_playlists(azura, headers, media_id, playlist_ids=(1, 2)):
+    """Assign approved station playlists using AzuraCast's documented media PUT."""
+    if not isinstance(media_id, int) or media_id <= 0:
+        raise RuntimeError("Upload response did not provide a numeric media ID")
+    response = azura.put(
+        f"{AZURA}/file/{media_id}",
+        headers=headers,
+        json={"playlists": list(playlist_ids)},
+    )
+    response.raise_for_status()
+    check = azura.get(AZURA + "/files", headers=headers)
+    check.raise_for_status()
+    media = next((x for x in check.json() if x.get("id") == media_id), None)
+    if media is None:
+        raise RuntimeError(f"Media {media_id} not found after playlist update")
+    actual = {p["id"] for p in media.get("playlists", []) if isinstance(p, dict) and "id" in p}
+    if not set(playlist_ids).issubset(actual):
+        raise RuntimeError(f"Media {media_id}: playlist assignment not confirmed ({sorted(actual)})")
+    print(f"PLAYLISTS OK: media {media_id} -> {sorted(actual)}", flush=True)
+
+
 def main():
     user = os.environ.get("AGGILLI_WEBDAV_USER")
     password = os.environ.get("AGGILLI_WEBDAV_APP_PASSWORD")
@@ -107,6 +128,24 @@ def main():
                 with source.open("rb") as stream:
                     response = azura.post(AZURA + "/files/upload", headers=headers, files={"file": (output, stream, "audio/mpeg")})
                 response.raise_for_status()
+                uploaded = response.json()
+                if not isinstance(uploaded, dict):
+                    raise RuntimeError("Unexpected AzuraCast upload response")
+                media_id = uploaded.get("id")
+                if not isinstance(media_id, int):
+                    # Some installations return a wrapper; use the files listing
+                    # to resolve the exact uploaded path rather than guessing.
+                    listing = azura.get(AZURA + "/files", headers=headers)
+                    listing.raise_for_status()
+                    matches = [
+                        x for x in listing.json()
+                        if normalized_filename(Path(x.get("path", "")).name)
+                        == normalized_filename(output)
+                    ]
+                    if len(matches) != 1:
+                        raise RuntimeError("Cannot uniquely identify uploaded media")
+                    media_id = matches[0].get("id")
+                assign_playlists(azura, headers, media_id)
                 existing.add(normalized_filename(output))
                 imported += 1
                 state[name] = {"etag": etag, "azuracast_filename": output}
