@@ -250,6 +250,17 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
  </div>
  <p id="aggilliDjStatus" role="status" aria-live="polite" style="font-size:12px;color:#b4c8c2"></p>
  <div id="aggilliDjResults"></div>
+ <details id="aggilliDjCommercial" style="margin:10px 0;border-top:1px solid #355047;padding-top:10px">
+ <summary style="cursor:pointer;font-size:12px;color:#b8dfd0">Conectar DJ ANI comercial (homologação)</summary>
+ <p style="font-size:11px;color:#a5b8b0">Apenas HTTPS. Token temporário mantido nesta página. Músicas comerciais ainda não são reproduzidas pelo player público.</p>
+ <label for="aggilliDjApi" style="font-size:12px">URL HTTPS da API comercial</label>
+ <input id="aggilliDjApi" type="url" placeholder="https://staging.exemplo.com" autocomplete="off" style="margin:4px 0;width:100%;border-radius:8px">
+ <label for="aggilliDjToken" style="font-size:12px">Token do ouvinte</label>
+ <input id="aggilliDjToken" type="password" autocomplete="off" placeholder="Token de homologação" style="margin:4px 0;width:100%;border-radius:8px">
+ <button type="button" id="aggilliDjCommercialRun" style="border-radius:8px;margin:8px 0">Consultar DJ ANI comercial</button>
+ <button type="button" id="aggilliDjCommercialClear" style="border-radius:8px;margin:8px 0">Limpar acesso</button>
+</details>
+<div id="aggilliDjCommercialResults" aria-live="polite"></div>
  <div style="font-size:11px;color:#a5b8b0;margin-top:10px">Recomendações locais por metadados. A integração conversacional com a ANI será habilitada após validar a API e as permissões comerciais.</div>
 </section>
 <!-- AGGILLI_UNIFIED_QUEUE_V1 -->
@@ -1066,6 +1077,54 @@ fetch('catalogo.json',{cache:'no-store'})
   window.render=function(){originalRender();window.aggilliRenderQueue();};
  }
  window.aggilliRenderQueue();
+})();
+</script>
+<script>
+/* AGGILLI_UNIFIED_COMMERCIAL_DJ_V1 */
+(() => {
+ const api=document.getElementById('aggilliDjApi');
+ const token=document.getElementById('aggilliDjToken');
+ const run=document.getElementById('aggilliDjCommercialRun');
+ const clear=document.getElementById('aggilliDjCommercialClear');
+ const output=document.getElementById('aggilliDjCommercialResults');
+ const status=document.getElementById('aggilliDjStatus');
+ const prompt=document.getElementById('aggilliDjPrompt');
+ if(!api||!token||!run||!clear||!output||!status||!prompt)return;
+ clear.addEventListener('click',()=>{api.value='';token.value='';output.replaceChildren();status.textContent='Acesso de homologação limpo.';});
+ run.addEventListener('click',async()=>{
+  run.disabled=true;
+  output.replaceChildren();
+  try{
+   const query=prompt.value.trim();
+   if(!query||query.length>250)throw Error('Escreva seu pedido musical em até 250 caracteres.');
+   const base=new URL(api.value);
+   if(base.protocol!=='https:'||base.username||base.password||base.search||base.hash)
+    throw Error('Informe uma URL HTTPS válida sem parâmetros.');
+   if(token.value.length<32)throw Error('Informe um token de homologação válido.');
+   status.textContent='Consultando o DJ ANI comercial...';
+   const response=await fetch(base.href.replace(/\/$/,'')+'/listeners/dj/session',{
+    method:'POST',redirect:'error',cache:'no-store',
+    headers:{'Authorization':'Bearer '+token.value,'Content-Type':'application/json'},
+    body:JSON.stringify({prompt:query,territory:'BR',limit:10})
+   });
+   if(!response.ok)throw Error('API comercial retornou HTTP '+response.status);
+   const data=await response.json();
+   if(!data||!Array.isArray(data.tracks))throw Error('Resposta inválida da API comercial.');
+   const title=document.createElement('strong');
+   title.textContent=String(data.title||'Sessão DJ ANI').slice(0,100);
+   title.style.color='#4ade80';output.append(title);
+   data.tracks.slice(0,10).forEach((track,i)=>{
+    const line=document.createElement('div');
+    line.style.cssText='padding:8px 0;border-top:1px solid #355047;font-size:12px';
+    const name=document.createElement('strong');
+    name.textContent=(i+1)+'. '+String(track.artist||'')+' — '+String(track.title||'');
+    const reason=document.createElement('div');reason.textContent=String(track.reason||'');
+    reason.style.color='#a5b8b0';line.append(name,reason);output.append(line);
+   });
+   status.textContent='DJ ANI: '+data.tracks.length+' sugestões comerciais autorizadas para catálogo. Reprodução protegida ainda indisponível.';
+  }catch(error){status.textContent=error.message;}
+  finally{run.disabled=false;}
+ });
 })();
 </script>
 </body>
