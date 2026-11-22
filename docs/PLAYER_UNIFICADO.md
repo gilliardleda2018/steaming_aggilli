@@ -4,6 +4,16 @@
 
 Não criar segundo player, nova página ou mudança no layout aprovado. Integrar faixas AzuraCast e arquivos Nextcloud MP3/MP4 na **mesma lista**, com os mesmos controles de navegação, busca, shuffle, gêneros e estado de reprodução.
 
+## Biblioteca padrão
+
+A **Aggilli Nuvem (Nextcloud WebDAV)** é a origem padrão da biblioteca exibida no player. Pasta configurada no servidor: `https://nuvem.aggillintelligence.com.br/remote.php/dav/files/aggilli-admin/musica/`.
+
+- Ao abrir, carregar primeiro o catálogo da nuvem; mesclar em seguida as faixas existentes do AzuraCast na mesma lista, sem removê-las.
+- A navegação, busca, reprodução e shuffle funcionam sobre a biblioteca unificada; a nuvem é a origem preferencial quando houver itens equivalentes, mas não excluir duplicatas automaticamente.
+- Se o Nextcloud estiver indisponível, continuar mostrando o catálogo AzuraCast existente e informar discretamente a indisponibilidade da nuvem.
+- O botão de upload e as credenciais administrativas permanecem separados da reprodução pública.
+- Não montar WebDAV diretamente como volume de mídia do AzuraCast, nem migrar arquivos em produção sem testes.
+
 ## Modelo de faixa
 
 Cada item recebe ID estável e fonte explícita:
