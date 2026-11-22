@@ -921,7 +921,16 @@ fetch('catalogo.json',{cache:'no-store'})
    const response=await fetch('upload-api/sync-nextcloud',{method:'POST',credentials:'same-origin',cache:'no-store'});
    const body=await response.json().catch(()=>({}));
    if(!response.ok)throw Error(body.detail||'HTTP '+response.status);
-   status.textContent='Solicitação recebida. O Debian está processando as mídias; acompanhe o serviço para confirmar a conclusão.';
+   status.textContent='Solicitação recebida. Aguardando processamento…';
+   for(let attempt=0;attempt<120;attempt++){
+    await new Promise(resolve=>setTimeout(resolve,5000));
+    const check=await fetch('upload-api/sync-nextcloud/status',{credentials:'same-origin',cache:'no-store'});
+    if(!check.ok)break;
+    const current=await check.json();
+    if(current.state==='running')status.textContent='Sincronizando mídias…';
+    if(current.state==='success'){status.textContent='Sincronização concluída. Atualize a biblioteca para ver as novas faixas.';break}
+    if(current.state==='failed'){status.textContent='Sincronização falhou. Consulte os logs no Debian.';break}
+   }
   }catch(error){status.textContent='Não foi possível iniciar: '+error.message}
   finally{button.disabled=false}
  });
