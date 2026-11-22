@@ -85,7 +85,7 @@ class ListenerTests(unittest.TestCase):
 
     def test_unconfigured_admin_denied(self):
         with patch.dict(os.environ, {"AGGILLI_COMMERCIAL_ADMIN_TOKEN": ""}):
-            self.assertEqual(self.client.put("/admin/subscriptions", json={},
+            self.assertEqual(self.client.put("/admin/subscriptions", json={"listener_id": "any", "plan": "premium", "status": "active", "access_until": "2030-01-01T00:00:00Z"},
                 headers={"Authorization": "Bearer " + TOKEN}).status_code, 503)
 
 if __name__ == "__main__":
