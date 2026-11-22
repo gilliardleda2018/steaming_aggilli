@@ -228,6 +228,7 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
   </div>
 </div>
 
+<video id="cloudVideo" controls playsinline preload="metadata" hidden style="display:none;width:100%;max-height:340px;margin-top:12px;border-radius:10px;background:#000"></video>
 <audio id="audio" preload="none"></audio>
  </section>
  <div class="genres" id="genreCards"></div>
@@ -266,6 +267,11 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
 </main>
 <script>
 const audio=document.getElementById('audio');
+const cloudVideo=document.getElementById('cloudVideo');
+const cloudPreview=new URLSearchParams(location.search).has('cloudPreview');
+function activeMedia(){return !cloudVideo.hidden?cloudVideo:audio}
+function hideCloudVideo(){cloudVideo.pause();cloudVideo.removeAttribute('src');cloudVideo.load();cloudVideo.hidden=true;cloudVideo.style.display='none'}
+function mediaUrl(t){return t.source==='nextcloud'?'/cloud/'+encodeURIComponent(t.filename):'music-api'+t.download_url}
 let tracks=[];
 let currentTrackId=null;
 let playQueue=[];
@@ -366,17 +372,18 @@ function moveTrack(direction){
 function nextTrack(){moveTrack(1)}
 function previousTrack(){moveTrack(-1)}
 function resumeAudio(){
- if(!audio.src){
+ const media=activeMedia();
+ if(!media.src){
   playRadio();
   return;
  }
- audio.play().catch(console.error);
+ media.play().catch(console.error);
 }
 function pauseAudio(){
- audio.pause();
+ activeMedia().pause();
 }
 function stopAudio(){
- audio.pause();
+ activeMedia().pause();
  const isRadio = audio.currentSrc.includes('radio.mp3');
  if(isRadio){
   audio.removeAttribute('src');
@@ -384,11 +391,12 @@ function stopAudio(){
   document.getElementById('now').textContent='Rádio interrompida';
    playbackMode='none';
  } else {
-  try { audio.currentTime=0; } catch(e){}
+  try { activeMedia().currentTime=0; } catch(e){}
   document.getElementById('now').textContent='Reprodução parada';
  }
 }
 function playRadio(){
+ hideCloudVideo();
  playbackMode='radio';
  currentTrackId=null;
  audio.src='radio.mp3';
@@ -407,11 +415,20 @@ function playTrack(track){
    shuffleHistoryIndex=shuffleHistory.length-1;
   }
  }
- audio.src='music-api'+track.download_url;
+ const isCloudVideo=track.source==='nextcloud'&&track.format==='mp4';
+ audio.pause();
+ hideCloudVideo();
+ if(isCloudVideo){
+  audio.removeAttribute('src');audio.load();
+  cloudVideo.hidden=false;cloudVideo.style.display='block';
+  cloudVideo.src=mediaUrl(track);
+ }else{
+  audio.src=mediaUrl(track);
+ }
  const parts=trackArtistTitle(track);
  document.getElementById('now').textContent=parts.artist+' — '+parts.title;
  refreshNow();
- audio.play().catch(console.error);
+ activeMedia().play().catch(console.error);
 }
 
 function formatTime(seconds){
@@ -461,7 +478,7 @@ function render(){
   const num=document.createElement('span');num.className='winamp-number';num.textContent=row.dataset.index;
   const info=document.createElement('div');info.className='winamp-info';
   const artist=document.createElement('strong');artist.textContent=parts.artist;
-  const title=document.createElement('small');title.textContent=parts.title;
+  const title=document.createElement('small');title.textContent=parts.title+(t.source==='nextcloud'?(t.format==='mp4'?' · 🎬 Nuvem':' · ☁ Nuvem'):'');
   const select=document.createElement('select');select.className='edit-genre';select.title='Alterar gênero';select.setAttribute('aria-label','Gênero de '+parts.title);
   genreNames.filter(x=>x!=='Todos').forEach(g=>{const option=document.createElement('option');option.value=g;option.textContent=g;select.append(option)});
   select.value=genres[t.track_id]||'Outros';
@@ -475,10 +492,11 @@ function render(){
  });
  refreshNow();
 }
-function togglePlayPause(){if(audio.paused)resumeAudio();else pauseAudio()}
+function togglePlayPause(){if(activeMedia().paused)resumeAudio();else pauseAudio()}
 function updateProgress(){
- const duration=audio.duration;
- const current=audio.currentTime||0;
+ const media=activeMedia();
+ const duration=media.duration;
+ const current=media.currentTime||0;
  const seek=document.getElementById('seek');
  const valid=Number.isFinite(duration)&&duration>0;
  seek.disabled=!valid;
@@ -486,18 +504,34 @@ function updateProgress(){
  document.getElementById('timeDisplay').textContent=formatTime(current)+' / '+(valid?formatTime(duration):'--:--');
 }
 audio.addEventListener('timeupdate',updateProgress);
+cloudVideo.addEventListener('timeupdate',updateProgress);
 audio.addEventListener('loadedmetadata',updateProgress);
+cloudVideo.addEventListener('loadedmetadata',updateProgress);
 audio.addEventListener('durationchange',updateProgress);
+cloudVideo.addEventListener('durationchange',updateProgress);
 audio.addEventListener('play',()=>{document.getElementById('mainPlay').textContent='⏸';refreshNow()});
-audio.addEventListener('pause',()=>{document.getElementById('mainPlay').textContent='▶'});
-document.getElementById('seek').addEventListener('input',e=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=Number(e.target.value)/1000*audio.duration});
+cloudVideo.addEventListener('play',()=>{audio.pause();document.getElementById('mainPlay').textContent='⏸';refreshNow()});
+audio.addEventListener('pause',()=>{if(activeMedia()===audio)document.getElementById('mainPlay').textContent='▶'});
+cloudVideo.addEventListener('pause',()=>{if(activeMedia()===cloudVideo)document.getElementById('mainPlay').textContent='▶'});
+cloudVideo.addEventListener('error',()=>{if(!cloudVideo.hidden)document.getElementById('status').textContent='Vídeo indisponível: verifique autenticação ou codec MP4.'});
+document.getElementById('seek').addEventListener('input',e=>{const m=activeMedia();if(Number.isFinite(m.duration)&&m.duration>0)m.currentTime=Number(e.target.value)/1000*m.duration});
 audio.addEventListener('ended',()=>{
  if(playbackMode==='track') nextTrack();
 });
+cloudVideo.addEventListener('ended',()=>{if(playbackMode==='track')nextTrack()});
 fetch('catalogo.json',{cache:'no-store'})
  .then(r=>{if(!r.ok)throw Error(r.status);return r.json()})
  .then(async data=>{
   tracks=data;
+  if(cloudPreview){
+   try{
+    const response=await fetch('/cloud-catalog',{cache:'no-store'});
+    if(!response.ok)throw Error('HTTP '+response.status);
+    const cloud=await response.json();
+    if(!Array.isArray(cloud.tracks))throw Error('Formato inválido');
+    tracks=[...cloud.tracks,...data];
+   }catch(err){console.warn('Nuvem indisponível, usando catálogo local:',err)}
+  }
   document.getElementById('totalTracks').textContent=tracks.length;
   try {
    const r=await fetch('generos.json',{cache:'no-store'});
