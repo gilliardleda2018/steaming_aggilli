@@ -66,6 +66,7 @@ class CloudTests(unittest.IsolatedAsyncioTestCase):
             result = await cloud_stream.proxy_media("demo.mp4", "GET", "bytes=0-3")
             self.assertEqual(result.status_code, 206)
             self.assertEqual(client.request[2]["Range"], "bytes=0-3")
+            self.assertEqual(client.request[2]["Authorization"], "Basic dXNlcjp0ZXN0LW9ubHk=")
             chunks = [chunk async for chunk in result.body_iterator]
             self.assertEqual(b"".join(chunks), b"test")
             self.assertTrue(client.closed)
