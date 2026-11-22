@@ -123,7 +123,7 @@ async def proxy_media(filename: str, method: str, range_header: str | None):
         finally:
             await upstream.aclose()
             if own_client:
-            await client.aclose()
+                await client.aclose()
 
     return StreamingResponse(
         stream(),
