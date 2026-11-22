@@ -1,0 +1,578 @@
+[
+  {
+    "track_id": "6a3acec28030fac0e0aa5902",
+    "download_url": "/api/station/1/ondemand/download/6a3acec28030fac0e0aa5902",
+    "media": {
+      "id": "a6c9565488a851ed5318b7456c4339be",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/6a3acec28030fac0e0aa5902",
+      "custom_fields": [],
+      "text": "001 Eyes Behind the Mind",
+      "artist": "",
+      "title": "001 Eyes Behind the Mind",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "a4e3b93450335cbb5b6a4939",
+    "download_url": "/api/station/1/ondemand/download/a4e3b93450335cbb5b6a4939",
+    "media": {
+      "id": "a6c9565488a851ed5318b7456c4339be",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/a4e3b93450335cbb5b6a4939",
+      "custom_fields": [],
+      "text": "001 Eyes Behind the Mind",
+      "artist": "",
+      "title": "001 Eyes Behind the Mind",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "d2c5e673b13693c2ce25e03c",
+    "download_url": "/api/station/1/ondemand/download/d2c5e673b13693c2ce25e03c",
+    "media": {
+      "id": "75db2f2970e76192213b4706ba82d2df",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/d2c5e673b13693c2ce25e03c",
+      "custom_fields": [],
+      "text": "002 The Ember Behind His Eyes",
+      "artist": "",
+      "title": "002 The Ember Behind His Eyes",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "198f50c5505692ed665c5b0c",
+    "download_url": "/api/station/1/ondemand/download/198f50c5505692ed665c5b0c",
+    "media": {
+      "id": "75db2f2970e76192213b4706ba82d2df",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/198f50c5505692ed665c5b0c",
+      "custom_fields": [],
+      "text": "002 The Ember Behind His Eyes",
+      "artist": "",
+      "title": "002 The Ember Behind His Eyes",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "a7a47bc232410fe48daffac8",
+    "download_url": "/api/station/1/ondemand/download/a7a47bc232410fe48daffac8",
+    "media": {
+      "id": "7819d800237331b802f46b184d7e8980",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/a7a47bc232410fe48daffac8",
+      "custom_fields": [],
+      "text": "002 The Year Melts at Twelve",
+      "artist": "",
+      "title": "002 The Year Melts at Twelve",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "4c6806bd577104297e600278",
+    "download_url": "/api/station/1/ondemand/download/4c6806bd577104297e600278",
+    "media": {
+      "id": "7819d800237331b802f46b184d7e8980",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/4c6806bd577104297e600278",
+      "custom_fields": [],
+      "text": "002 The Year Melts at Twelve",
+      "artist": "",
+      "title": "002 The Year Melts at Twelve",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "9f94e74f69d14fe587b61aa2",
+    "download_url": "/api/station/1/ondemand/download/9f94e74f69d14fe587b61aa2",
+    "media": {
+      "id": "16538d07fca594528761146d95adb548",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/9f94e74f69d14fe587b61aa2",
+      "custom_fields": [],
+      "text": "003 Beneath the Quiet Stone",
+      "artist": "",
+      "title": "003 Beneath the Quiet Stone",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "49fce0a1eff6a4dc0b5ed625",
+    "download_url": "/api/station/1/ondemand/download/49fce0a1eff6a4dc0b5ed625",
+    "media": {
+      "id": "16538d07fca594528761146d95adb548",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/49fce0a1eff6a4dc0b5ed625",
+      "custom_fields": [],
+      "text": "003 Beneath the Quiet Stone",
+      "artist": "",
+      "title": "003 Beneath the Quiet Stone",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "1cbf673f88a446257a970b6d",
+    "download_url": "/api/station/1/ondemand/download/1cbf673f88a446257a970b6d",
+    "media": {
+      "id": "2efe4e65fe24ca64b76b4648279f82f7",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/1cbf673f88a446257a970b6d",
+      "custom_fields": [],
+      "text": "003 Comfortably Numb ｜ Pink Floyd ｜ Ai Music Video",
+      "artist": "",
+      "title": "003 Comfortably Numb ｜ Pink Floyd ｜ Ai Music Video",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "a38f939ede1f749ae5e3d7d0",
+    "download_url": "/api/station/1/ondemand/download/a38f939ede1f749ae5e3d7d0",
+    "media": {
+      "id": "94716c619af0b86fd06e251eb67c484e",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/a38f939ede1f749ae5e3d7d0",
+      "custom_fields": [],
+      "text": "003 When the Universe Forgets Your Name",
+      "artist": "",
+      "title": "003 When the Universe Forgets Your Name",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "7aff556e44e57bb95e12284b",
+    "download_url": "/api/station/1/ondemand/download/7aff556e44e57bb95e12284b",
+    "media": {
+      "id": "94716c619af0b86fd06e251eb67c484e",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/7aff556e44e57bb95e12284b",
+      "custom_fields": [],
+      "text": "003 When the Universe Forgets Your Name",
+      "artist": "",
+      "title": "003 When the Universe Forgets Your Name",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "89ae5b4fa0fec09b671804ac",
+    "download_url": "/api/station/1/ondemand/download/89ae5b4fa0fec09b671804ac",
+    "media": {
+      "id": "3b73cf1cb9af76dc350a3fd42639c59e",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/89ae5b4fa0fec09b671804ac",
+      "custom_fields": [],
+      "text": "004 Down the Painted Staircase",
+      "artist": "",
+      "title": "004 Down the Painted Staircase",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "b0a5e231b48ced2b189f8180",
+    "download_url": "/api/station/1/ondemand/download/b0a5e231b48ced2b189f8180",
+    "media": {
+      "id": "3b73cf1cb9af76dc350a3fd42639c59e",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/b0a5e231b48ced2b189f8180",
+      "custom_fields": [],
+      "text": "004 Down the Painted Staircase",
+      "artist": "",
+      "title": "004 Down the Painted Staircase",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "2a6c280ac81e29fa13799c0e",
+    "download_url": "/api/station/1/ondemand/download/2a6c280ac81e29fa13799c0e",
+    "media": {
+      "id": "8d9066c0b809f463b52310a0953d8e04",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/2a6c280ac81e29fa13799c0e",
+      "custom_fields": [],
+      "text": "004 Inside the Dream",
+      "artist": "",
+      "title": "004 Inside the Dream",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "08626f897ae2af0d50444aa6",
+    "download_url": "/api/station/1/ondemand/download/08626f897ae2af0d50444aa6",
+    "media": {
+      "id": "8d9066c0b809f463b52310a0953d8e04",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/08626f897ae2af0d50444aa6",
+      "custom_fields": [],
+      "text": "004 Inside the Dream",
+      "artist": "",
+      "title": "004 Inside the Dream",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "dc30cfa0c78e65e490b8c8bf",
+    "download_url": "/api/station/1/ondemand/download/dc30cfa0c78e65e490b8c8bf",
+    "media": {
+      "id": "4b8473e0b96519ce0900350a566e42fb",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/dc30cfa0c78e65e490b8c8bf",
+      "custom_fields": [],
+      "text": "005 Learning To Fly (Alternative Version HD)",
+      "artist": "",
+      "title": "005 Learning To Fly (Alternative Version HD)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "ba7e67fa671990f6152102ad",
+    "download_url": "/api/station/1/ondemand/download/ba7e67fa671990f6152102ad",
+    "media": {
+      "id": "dcb8684f8029bcc3a7da8f31f98b06db",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/ba7e67fa671990f6152102ad",
+      "custom_fields": [],
+      "text": "005 Turn the World Inside Out • 1968 Psychedelic Rock",
+      "artist": "",
+      "title": "005 Turn the World Inside Out • 1968 Psychedelic Rock",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "b61c3aaaba929aa796a372b3",
+    "download_url": "/api/station/1/ondemand/download/b61c3aaaba929aa796a372b3",
+    "media": {
+      "id": "74a2ac0dba1c098950946d7ad60bb4d0",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/b61c3aaaba929aa796a372b3",
+      "custom_fields": [],
+      "text": "006 The Signal Watching Me",
+      "artist": "",
+      "title": "006 The Signal Watching Me",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "f8224e1859f16bf978a1d47c",
+    "download_url": "/api/station/1/ondemand/download/f8224e1859f16bf978a1d47c",
+    "media": {
+      "id": "74a2ac0dba1c098950946d7ad60bb4d0",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/f8224e1859f16bf978a1d47c",
+      "custom_fields": [],
+      "text": "006 The Signal Watching Me",
+      "artist": "",
+      "title": "006 The Signal Watching Me",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "ce5c27ab0434819f0e09410e",
+    "download_url": "/api/station/1/ondemand/download/ce5c27ab0434819f0e09410e",
+    "media": {
+      "id": "f5eca41d4499ba29ea02ab404561c89b",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/ce5c27ab0434819f0e09410e",
+      "custom_fields": [],
+      "text": "007 Inside the Dream",
+      "artist": "",
+      "title": "007 Inside the Dream",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "8369fd2038827cc951937e03",
+    "download_url": "/api/station/1/ondemand/download/8369fd2038827cc951937e03",
+    "media": {
+      "id": "13b0f03e9f26e498b421bbf2b8f4f506",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/8369fd2038827cc951937e03",
+      "custom_fields": [],
+      "text": "001 Pink Floyd - Goodbye Blue Sky (AI Music Video)",
+      "artist": "001 Pink Floyd",
+      "title": "Goodbye Blue Sky (AI Music Video)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "ea69f8cccbfe65c1c6d5fea2",
+    "download_url": "/api/station/1/ondemand/download/ea69f8cccbfe65c1c6d5fea2",
+    "media": {
+      "id": "edd315b2f9647c765e549f9ae64417fa",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/ea69f8cccbfe65c1c6d5fea2",
+      "custom_fields": [],
+      "text": "001 Pink Floyd - Goodbye Blue Sky (AI Music Video).f251",
+      "artist": "001 Pink Floyd",
+      "title": "Goodbye Blue Sky (AI Music Video).f251",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "64659610f04cd0930da581e6",
+    "download_url": "/api/station/1/ondemand/download/64659610f04cd0930da581e6",
+    "media": {
+      "id": "5a557bbe9acc6b8e4e019f4034b8f253",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/64659610f04cd0930da581e6",
+      "custom_fields": [],
+      "text": "002 Pink Floyd -  Hey You ｜ AI enhanced Music Video",
+      "artist": "002 Pink Floyd",
+      "title": " Hey You ｜ AI enhanced Music Video",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "22181a0fbfb95c992c4b2daf",
+    "download_url": "/api/station/1/ondemand/download/22181a0fbfb95c992c4b2daf",
+    "media": {
+      "id": "25f54af0b201456c8238cc1636003f70",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/22181a0fbfb95c992c4b2daf",
+      "custom_fields": [],
+      "text": "002 Pink Floyd - High Hopes (Official Music Video HD)",
+      "artist": "002 Pink Floyd",
+      "title": "High Hopes (Official Music Video HD)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "e3de4e976ce8c634ec5c7d6d",
+    "download_url": "/api/station/1/ondemand/download/e3de4e976ce8c634ec5c7d6d",
+    "media": {
+      "id": "db0307cc0860ee2c5ef32908bfdf1d5d",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/e3de4e976ce8c634ec5c7d6d",
+      "custom_fields": [],
+      "text": "004 Pink Floyd - Welcome To The Machine (AI Music Video)",
+      "artist": "004 Pink Floyd",
+      "title": "Welcome To The Machine (AI Music Video)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "27796b8504c244669e3d6d64",
+    "download_url": "/api/station/1/ondemand/download/27796b8504c244669e3d6d64",
+    "media": {
+      "id": "179a76128874c7445d74177a56c07497",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/27796b8504c244669e3d6d64",
+      "custom_fields": [],
+      "text": "004 Pink Floyd - What Do You Want From Me (The Division Bell 30th Anniversary Official Audio)",
+      "artist": "004 Pink Floyd",
+      "title": "What Do You Want From Me (The Division Bell 30th Anniversary Official Audio)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "ffd3c59b2c837278d9131f7e",
+    "download_url": "/api/station/1/ondemand/download/ffd3c59b2c837278d9131f7e",
+    "media": {
+      "id": "768ff8e38392afec35bd563805b0c971",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/ffd3c59b2c837278d9131f7e",
+      "custom_fields": [],
+      "text": "005 Pink Floyd - Is There Anybody Out There ⧸ Nobody Home 1979 The Wall A Journey Through Time And Space",
+      "artist": "005 Pink Floyd",
+      "title": "Is There Anybody Out There ⧸ Nobody Home 1979 The Wall A Journey Through Time And Space",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "5bdc5738b123a4a911b89da2",
+    "download_url": "/api/station/1/ondemand/download/5bdc5738b123a4a911b89da2",
+    "media": {
+      "id": "28514185065867cfc1f8a97354dac04e",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/5bdc5738b123a4a911b89da2",
+      "custom_fields": [],
+      "text": "006 Children of the Sun - Blue Mountains Mirage (psychedelic rock)",
+      "artist": "006 Children of the Sun",
+      "title": "Blue Mountains Mirage (psychedelic rock)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "33a5b7481560f51ed448311a",
+    "download_url": "/api/station/1/ondemand/download/33a5b7481560f51ed448311a",
+    "media": {
+      "id": "e2082a793a15a92f7e8717abfc7462a1",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/33a5b7481560f51ed448311a",
+      "custom_fields": [],
+      "text": "006 Pink Floyd - Keep Talking (Official Lyrics Video)",
+      "artist": "006 Pink Floyd",
+      "title": "Keep Talking (Official Lyrics Video)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "019a80524b951f28d9d50828",
+    "download_url": "/api/station/1/ondemand/download/019a80524b951f28d9d50828",
+    "media": {
+      "id": "4ed962aa74cbf5a4eca593bfe9fa57b2",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/019a80524b951f28d9d50828",
+      "custom_fields": [],
+      "text": "006 Pink Floyd - The Great Gig In The Sky (PULSE Restored & Re-Edited)",
+      "artist": "006 Pink Floyd",
+      "title": "The Great Gig In The Sky (PULSE Restored & Re-Edited)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "45c6e1dbad486faab9c16865",
+    "download_url": "/api/station/1/ondemand/download/45c6e1dbad486faab9c16865",
+    "media": {
+      "id": "dfc076dd5b01cc3ed7b8647b65cd0b48",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/45c6e1dbad486faab9c16865",
+      "custom_fields": [],
+      "text": "007 Pink Floyd - Marooned (Official Music Video HD)",
+      "artist": "007 Pink Floyd",
+      "title": "Marooned (Official Music Video HD)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "fd14195c64e69dcbbd547db4",
+    "download_url": "/api/station/1/ondemand/download/fd14195c64e69dcbbd547db4",
+    "media": {
+      "id": "5bfd1fe8c42365cb6c0ad55d55bbc3fd",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/fd14195c64e69dcbbd547db4",
+      "custom_fields": [],
+      "text": "007 Pink Floyd - Take It Back (Official Music Video HD)",
+      "artist": "007 Pink Floyd",
+      "title": "Take It Back (Official Music Video HD)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "b429f79bc482bf81f9b01f1a",
+    "download_url": "/api/station/1/ondemand/download/b429f79bc482bf81f9b01f1a",
+    "media": {
+      "id": "119e01b37d3f4e82e3f91bc215e3db0a",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/b429f79bc482bf81f9b01f1a",
+      "custom_fields": [],
+      "text": "008 OZZY OSBOURNE - ＂Dreamer＂ (Official Video)",
+      "artist": "008 OZZY OSBOURNE",
+      "title": "＂Dreamer＂ (Official Video)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "d63dfa5083b92e1296fe7191",
+    "download_url": "/api/station/1/ondemand/download/d63dfa5083b92e1296fe7191",
+    "media": {
+      "id": "92634e2ff3115155c400d246513c5a53",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/d63dfa5083b92e1296fe7191",
+      "custom_fields": [],
+      "text": "008 The Alan Parsons Symphonic Project ＂Sirius＂ - ＂Eye In The Sky＂ (Live in Colombia)",
+      "artist": "008 The Alan Parsons Symphonic Project ＂Sirius＂",
+      "title": "＂Eye In The Sky＂ (Live in Colombia)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "5b435711094f8598854c3e63",
+    "download_url": "/api/station/1/ondemand/download/5b435711094f8598854c3e63",
+    "media": {
+      "id": "e3d525c245b72f28c9123f1c57e050a6",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/5b435711094f8598854c3e63",
+      "custom_fields": [],
+      "text": "009 Roger Waters - Comfortably Numb 2022 (Official Video)",
+      "artist": "009 Roger Waters",
+      "title": "Comfortably Numb 2022 (Official Video)",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  },
+  {
+    "track_id": "38d9efa4126854118c2422bb",
+    "download_url": "/api/station/1/ondemand/download/38d9efa4126854118c2422bb",
+    "media": {
+      "id": "df63e24a598caf50f3a9cd8ca7a39ede",
+      "art": "http://172.16.100.13:8080/api/station/aggilli-radio/art/38d9efa4126854118c2422bb",
+      "custom_fields": [],
+      "text": "010 David Gilmour with Romany Gilmour  - Between Two Points [Tour Rehearsal]",
+      "artist": "010 David Gilmour with Romany Gilmour ",
+      "title": "Between Two Points [Tour Rehearsal]",
+      "album": "",
+      "genre": "",
+      "isrc": "",
+      "lyrics": ""
+    }
+  }
+]

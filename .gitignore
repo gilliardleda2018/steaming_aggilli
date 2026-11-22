@@ -1,30 +1,28 @@
-# Credenciais e configuracoes locais
 .env
 .env.*
 !.env.example
-*secret*
-*token*
-*credential*
-upload-users
-*.pem
-*.key
-*.p12
-*.pfx
-*.crt
-
-# Midia e dados locais
 *.mp3
 *.wav
 *.flac
 *.ogg
 *.m4a
-*.sqlite*
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.backup*
 *.log
-
-# Ambientes e temporarios
+*secret*
+*token*
+*credential*
+upload-users
 .venv/
 venv/
 __pycache__/
 *.pyc
-*.backup*
+*.sqlite*
 .DS_Store
+
+# Backups históricos
+*.bak

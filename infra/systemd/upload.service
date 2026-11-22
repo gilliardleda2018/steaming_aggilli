@@ -1,0 +1,22 @@
+[Unit]
+Description=Aggilli Music Upload API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=aggilli-upload
+Group=aggilli-upload
+SupplementaryGroups=aggilli-upload-secrets
+WorkingDirectory=/home/gilliard/projetos/aggilli-music-upload
+ExecStart=/home/gilliard/projetos/aggilli-music-upload/.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8400
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

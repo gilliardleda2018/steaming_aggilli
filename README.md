@@ -1,22 +1,23 @@
 # Aggilli Streaming
 
-Projeto que reúne o **Aggilli Music** (player web) e a infraestrutura de **Aggilli Radio**.
+Projeto Aggilli Music e Aggilli Radio.
 
-## Componentes previstos
-
-- `player/`: interface web, reprodução, equalizador e catálogo
+## Componentes
+- `player/`: interface web do Aggilli Music
 - `backend/`: API FastAPI para upload autenticado de MP3
-- `infra/apache/`: configurações de proxy
+- `infra/apache/`: exemplos de configuração Apache
 - `infra/systemd/`: unidades do serviço de upload
 
-## Situação do repositório
-
-A estrutura inicial e as regras de exclusão foram criadas. **O código em produção ainda precisa ser importado do servidor Debian**, após revisão de segredos e dados sensíveis.
+## Tecnologias
+Debian, Apache, FastAPI, Uvicorn, AzuraCast e Tailscale.
 
 ## Segurança
+Credenciais, certificados, dados de produção e músicas não
+fazem parte deste repositório.
 
-Não publicar músicas, credenciais do AzuraCast, hashes de senhas, tokens, certificados, chaves privadas ou arquivos de ambiente.
+## Estado atual
+Upload autenticado de MP3 testado com sucesso.
+Atualização automática do catálogo ainda pendente.
 
-## Implantação
-
-O player e a API estão atualmente hospedados fora deste repositório. Não utilizar este repositório como fonte de deploy até a importação e validação dos arquivos reais.
+As configurações de infraestrutura são referências do ambiente
+existente e devem ser revisadas antes de reutilização.

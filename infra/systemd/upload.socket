@@ -1,0 +1,13 @@
+[Unit]
+Description=Aggilli Music Upload Unix Socket
+
+[Socket]
+ListenStream=/run/aggilli-music-upload/upload.sock
+SocketUser=aggilli-upload
+SocketGroup=www-data
+SocketMode=0660
+DirectoryMode=0750
+Service=aggilli-music-upload.service
+
+[Install]
+WantedBy=sockets.target

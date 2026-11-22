@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aggilli Music</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101513;color:#fff;font-family:Arial,sans-serif}
+header{background:#17221d;padding:25px;color:#4ade80;font-size:28px;font-weight:bold}
+main{max-width:1100px;margin:auto;padding:25px}
+h1{font-size:25px}
+button{background:#4ade80;border:0;border-radius:20px;padding:12px 18px;cursor:pointer}
+input{padding:13px;border-radius:20px;border:1px solid #444;background:#202b25;color:white;width:100%;margin:20px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px}
+.card{background:#202b25;border-radius:12px;padding:20px}
+.card:hover{background:#2b4033}
+.card strong{display:block;margin-bottom:12px}
+.player{position:fixed;bottom:0;left:0;width:100%;background:#1a2920;padding:15px;border-top:1px solid #345}
+audio{width:100%}
+body{padding-bottom:120px}
+
+.genres{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:20px 0 30px}
+.genre-card{min-height:115px;border-radius:15px;padding:20px;text-align:left;color:white;font-size:21px;font-weight:bold;cursor:pointer;transition:transform .2s}
+.genre-card:hover{transform:translateY(-4px)}
+.genre-card small{display:block;font-size:12px;margin-top:12px;font-weight:normal}
+.genre-card.selected{outline:3px solid #4ade80}
+
+.music-controls{
+ display:flex;
+ gap:10px;
+ margin:10px 0;
+ flex-wrap:wrap;
+}
+.music-controls button{
+ background:#4ade80;
+ color:#101513;
+ font-weight:bold;
+}
+.music-controls button:hover{
+ background:#86efac;
+}
+</style>
+<!-- AGGILLI_PUBLIC_PATHS_V1 -->
+
+<style>
+#library{
+ display:flex;
+ flex-direction:column;
+ gap:2px;
+}
+.winamp-row{
+ display:flex;
+ align-items:center;
+ gap:10px;
+ padding:9px 10px;
+ background:#18221e;
+ border-radius:5px;
+ border-left:3px solid transparent;
+}
+.winamp-row:nth-child(even){
+ background:#202d26;
+}
+.winamp-row:hover{
+ border-left-color:#4ade80;
+ background:#294332;
+}
+.winamp-number{
+ color:#8fa99a;
+ font-size:12px;
+ min-width:25px;
+}
+.winamp-info{
+ flex:1;
+ min-width:0;
+ display:flex;
+ flex-direction:column;
+ gap:3px;
+}
+.winamp-info strong{
+ color:#e8fff0;
+ font-size:13px;
+ overflow:hidden;
+ text-overflow:ellipsis;
+ white-space:nowrap;
+}
+.winamp-info small{
+ color:#91a99a;
+ font-size:11px;
+ overflow:hidden;
+ text-overflow:ellipsis;
+ white-space:nowrap;
+}
+.winamp-select{
+ width:125px;
+ max-width:30%;
+ background:#293b30;
+ color:#d8f5df;
+ border:1px solid #405747;
+ border-radius:5px;
+ padding:6px 3px;
+ font-size:11px;
+}
+.winamp-play{
+ background:#285b45;
+ color:#fff;
+ border:0;
+ border-radius:5px;
+ padding:8px 12px;
+ cursor:pointer;
+}
+@media(max-width:500px){
+ .winamp-row{gap:6px;padding:8px 5px}
+ .winamp-select{width:85px;font-size:10px}
+ .winamp-play{padding:8px}
+}
+</style>
+<style>
+/* AGGILLI_WINAMP_APPROVED_V2 */
+:root{color-scheme:dark;--green:#4ade80;--muted:#9ca3af}
+body{background:#f3f5f4;color:#e9eef0;padding-bottom:0;font-family:system-ui,-apple-system,Arial,sans-serif}
+header{display:none}
+main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-radius:20px;box-shadow:0 12px 40px #0002}
+.app-head{display:flex;align-items:center;gap:12px;padding:6px 0 16px}
+.app-logo{width:38px;height:38px;border-radius:10px;background:#263d32;color:var(--green);display:grid;place-items:center;font-size:21px}
+.app-head strong{font-size:17px;letter-spacing:.02em}.app-head small{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+.player{position:static;background:#090e14;border:0;border-radius:14px;padding:14px;margin-bottom:12px}
+.now-label{font-size:10px;color:var(--green);margin-bottom:9px}.now-line{font-size:15px;min-height:25px}
+.now-meta{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font-size:12px;margin:9px 0}
+#timeDisplay{color:var(--green);font-variant-numeric:tabular-nums}
+#seek{width:100%;margin:0;accent-color:var(--green);height:17px;cursor:pointer;padding:0;border:0;background:transparent}
+.music-controls{display:flex;justify-content:center;align-items:center;gap:7px;margin:6px 0 0;flex-wrap:nowrap}
+.music-controls button{background:transparent;color:#e6edf0;border:0;border-radius:9px;padding:8px 11px;font-size:17px;min-width:37px}
+.music-controls button:hover{background:#25382c}.music-controls .main-play{background:var(--green);color:#07120c;border-radius:50%;width:42px;height:42px}
+#shuffleBtn{font-size:15px}#radioBtn{background:#233d2f;color:var(--green);border-radius:8px;font-size:11px;padding:8px 11px}
+#audio{display:none}
+.genres{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.genre-card{min-height:0;font-size:11px;font-weight:500;border-radius:8px;padding:7px 10px;transition:none;background:#252e38!important}
+.genre-card small{display:inline;font-size:11px;margin:0 0 0 4px}.genre-card.selected{outline:0;background:#315841!important;color:#b4f8ca}
+.genre-card:hover{transform:none;background:#34483e!important}
+.library-bar{display:flex;align-items:center;gap:12px;justify-content:space-between;margin:10px 0 8px}
+#libraryHeading{font-size:13px;margin:0}#status{font-size:11px;color:var(--muted)}
+#search{margin:0 0 10px;border-radius:8px;background:#1c2630;border-color:#303b43;font-size:13px;padding:10px}
+#library{display:flex;flex-direction:column;gap:0;max-height:60vh;overflow-y:auto;border-radius:8px;background:#111820}
+.list-head{display:grid;grid-template-columns:40px 1fr 58px;gap:8px;padding:10px 12px;background:#233038;color:#9da9b3;font-size:10px}
+.winamp-row,.winamp-row:nth-child(even){display:grid;grid-template-columns:40px minmax(0,1fr) 58px;align-items:center;gap:8px;padding:9px 12px;border:0;border-radius:0;background:#151d26;cursor:pointer;min-height:52px}
+.winamp-row:nth-child(even){background:#111820}.winamp-row:hover{background:#273c32}.winamp-row.active{background:#234333!important}
+.winamp-row.active .winamp-info strong,.winamp-row.active .winamp-number{color:var(--green)}
+.winamp-number{min-width:0;color:#98a5b3;font-size:12px}
+.winamp-info{min-width:0;display:flex;flex-direction:column;gap:3px}
+.winamp-info strong{font-size:13px;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.winamp-info small{font-size:11px;color:#96a1af;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.winamp-duration{font-size:11px;color:#9ba5b2;text-align:right;font-variant-numeric:tabular-nums}
+.winamp-select,.winamp-play{display:none}
+.edit-genre{background:transparent;color:#9daaa2;border:1px solid #37443c;border-radius:6px;font-size:11px;padding:5px;max-width:100%;margin-top:4px;display:none}
+.winamp-row:hover .edit-genre,.winamp-row:focus-within .edit-genre{display:block}
+@media(max-width:600px){body{background:#11161d}main{margin:0;padding:10px;border-radius:0;box-shadow:none}.winamp-row,.winamp-row:nth-child(even){grid-template-columns:30px minmax(0,1fr) 46px;padding:10px 8px}.list-head{grid-template-columns:30px 1fr 46px;padding:9px 8px}.music-controls{gap:1px}.music-controls button{padding:7px;min-width:31px;font-size:15px}#radioBtn{font-size:10px;padding:7px}.player{padding:12px}#library{max-height:none}}
+</style>
+<style>
+/* AGGILLI_VOLUME_EQ_V1 styles */
+.aggilli-sound{margin-top:9px;border-top:1px solid #293b36;padding-top:9px;color:#aebdb7;font-size:11px}
+.aggilli-volume-line{display:flex;align-items:center;gap:10px;min-width:0}
+.aggilli-volume-line label{font-weight:700;letter-spacing:1px}
+.aggilli-volume-line input{flex:1;min-width:65px;max-width:220px;margin:0;accent-color:#4ade80;cursor:pointer}
+.aggilli-volume-line output{min-width:36px;color:#4ade80;font-variant-numeric:tabular-nums}
+.aggilli-sound button,.aggilli-eq-top select{background:#1c2927;color:#d8f7e1;border:1px solid #365147;border-radius:6px;padding:6px 9px;cursor:pointer;font-size:11px}
+#aggilliMute{font-size:15px;min-width:35px}#aggilliEqToggle{margin-left:auto;color:#4ade80;font-weight:700}
+.aggilli-eq-panel{padding:12px 0 3px}.aggilli-eq-panel[hidden]{display:none}
+.aggilli-eq-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}.aggilli-eq-top select{flex:1;max-width:190px}.aggilli-eq-top button{margin-left:auto}
+.aggilli-eq-bands{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.aggilli-eq-bands label{display:flex;flex-direction:column;gap:7px;font-weight:700;letter-spacing:.5px}
+.aggilli-eq-bands output{font-weight:400;color:#4ade80;letter-spacing:0}
+.aggilli-eq-bands input{width:100%;margin:0;accent-color:#4ade80}
+#aggilliEqStatus{display:block;margin-top:11px;color:#859d91}
+@media(max-width:480px){.aggilli-volume-line{gap:6px}.aggilli-volume-line label{font-size:9px}.aggilli-eq-bands{gap:8px}.aggilli-eq-bands label{font-size:9px}}
+</style>
+
+<style>
+/* AGGILLI_SPECTRUM_V1 */
+.aggilli-spectrum-wrap{position:relative;width:100%;height:clamp(130px,22vw,235px);margin:10px 0 12px;background:linear-gradient(180deg,#08150f,#07100d 70%,#0a1712);border:1px solid #20392d;border-radius:9px;overflow:hidden}
+#aggilliSpectrum{display:block;width:100%;height:100%}
+.aggilli-spectrum-caption{position:absolute;left:12px;right:12px;top:10px;display:flex;justify-content:space-between;pointer-events:none;color:#7acb9b;font-size:9px;letter-spacing:1.2px;opacity:.8}
+#aggilliSpectrumState{color:#57896c}
+@media(max-width:600px){.aggilli-spectrum-wrap{height:155px;margin:8px 0 10px}}
+@media(prefers-reduced-motion:reduce){.aggilli-spectrum-wrap{height:125px}}
+</style>
+</head>
+<body>
+<main>
+ <div class="app-head"><div class="app-logo">♫</div><div><strong>AGGILLI MUSIC</strong><small>PLAYLIST EDITOR · <span id="totalTracks">36</span> FAIXAS</small></div></div>
+ <section class="player" aria-label="Reprodutor de música">
+  <div class="now-label">REPRODUZINDO AGORA</div>
+  <div id="now" class="now-line" aria-live="polite">Selecione uma música</div>
+  <div class="now-meta"><span id="nowGenre">Aggilli Music</span><span id="timeDisplay">00:00 / 00:00</span></div>
+  <div class="aggilli-spectrum-wrap" aria-label="Visualizador de espectro de áudio"><canvas id="aggilliSpectrum" aria-hidden="true"></canvas><div class="aggilli-spectrum-caption">SPECTRUM ANALYZER <span id="aggilliSpectrumState">AGGILLI MUSIC</span></div></div>
+  <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Posição da música">
+  <div class="music-controls">
+   <button id="shuffleBtn" onclick="toggleShuffle()" title="Aleatório" aria-label="Aleatório">⤨</button>
+   <button onclick="previousTrack()" title="Anterior" aria-label="Anterior">⏮</button>
+   <button class="main-play" id="mainPlay" onclick="togglePlayPause()" title="Reproduzir ou pausar" aria-label="Reproduzir ou pausar">▶</button>
+   <button onclick="nextTrack()" title="Próxima" aria-label="Próxima">⏭</button>
+   <button onclick="stopAudio()" title="Parar" aria-label="Parar">■</button>
+   <button id="radioBtn" onclick="playRadio()" title="Ouvir rádio ao vivo">◉ RÁDIO</button>
+  </div>
+  <!-- AGGILLI_VOLUME_EQ_V1 -->
+<div class="aggilli-sound" aria-label="Volume e equalizador">
+  <div class="aggilli-volume-line">
+    <button type="button" id="aggilliMute" aria-label="Silenciar" title="Silenciar">🔊</button>
+    <label for="aggilliVolume">VOLUME</label>
+    <input id="aggilliVolume" type="range" min="0" max="100" value="75" aria-label="Volume">
+    <output id="aggilliVolumeValue" for="aggilliVolume">75%</output>
+    <button type="button" id="aggilliEqToggle" aria-expanded="false" aria-controls="aggilliEqPanel">EQ <span aria-hidden="true">▾</span></button>
+  </div>
+  <div id="aggilliEqPanel" class="aggilli-eq-panel" hidden>
+    <div class="aggilli-eq-top">
+      <label for="aggilliPreset">PRESET</label>
+      <select id="aggilliPreset" aria-label="Preset do equalizador">
+        <option value="flat">Flat</option><option value="rock">Rock</option><option value="pop">Pop</option><option value="bass">Bass</option><option value="vocal">Vocal</option>
+      </select>
+      <button type="button" id="aggilliEqReset">Zerar</button>
+    </div>
+    <div class="aggilli-eq-bands">
+      <label>GRAVES <output id="aggilliBassValue">0 dB</output><input id="aggilliBass" type="range" min="-12" max="12" value="0" step="1"></label>
+      <label>MÉDIOS <output id="aggilliMidValue">0 dB</output><input id="aggilliMid" type="range" min="-12" max="12" value="0" step="1"></label>
+      <label>AGUDOS <output id="aggilliTrebleValue">0 dB</output><input id="aggilliTreble" type="range" min="-12" max="12" value="0" step="1"></label>
+    </div>
+    <small id="aggilliEqStatus" role="status">O equalizador é ativado ao reproduzir áudio.</small>
+  </div>
+</div>
+
+<audio id="audio" preload="none"></audio>
+ </section>
+ <div class="genres" id="genreCards"></div>
+ <div class="library-bar"><h2 id="libraryHeading">Biblioteca musical</h2><div id="status">Carregando biblioteca...</div></div>
+ <input id="search" placeholder="Pesquisar artista ou música..." aria-label="Pesquisar artista ou música" oninput="render()">
+ <div class="list-head"><span>#</span><span>ARTISTA — TÍTULO</span><span style="text-align:right">TEMPO</span></div>
+ <div id="library"></div>
+
+
+<!-- AGGILLI_UPLOAD_PANEL_V2 -->
+<section id="aggilliUploadPanel" style="margin:16px 0;padding:20px;border:1px solid #40546a;border-radius:12px;background:#111a27;color:#e7eef8">
+  <h3 style="margin:0 0 8px">🎵 Adicionar músicas à biblioteca</h3>
+  <p style="font-size:13px;color:#aabbd0">Selecione um ou vários arquivos MP3, com até 100 MB cada.</p>
+
+  <input type="file" id="aggilliUploadFiles" accept=".mp3,audio/mpeg" multiple>
+
+  <button type="button" id="aggilliUploadButton" style="display:block;margin:14px 0;padding:12px 18px;border:0;border-radius:8px;background:#38bdf8;color:#071522;font-weight:bold;opacity:.65">
+    ⬆ Adicionar músicas à biblioteca
+  </button>
+
+  <div id="aggilliUploadProgress" style="display:none;margin:14px 0">
+    <div style="display:flex;justify-content:space-between;gap:12px;font-size:13px">
+      <span id="aggilliUploadFilename">Aguardando envio</span>
+      <span id="aggilliUploadPercent">0%</span>
+    </div>
+    <progress id="aggilliUploadBar" max="100" value="0" style="width:100%;height:14px;accent-color:#38bdf8"></progress>
+    <div id="aggilliUploadTotal" style="font-size:12px;color:#aabbd0">0 de 0 músicas</div>
+  </div>
+
+  <div id="aggilliUploadStatus" role="status" aria-live="polite" style="font-size:13px;color:#aabbd0">
+    Selecione suas músicas para começar.
+  </div>
+</section>
+
+
+</main>
+<script>
+const audio=document.getElementById('audio');
+let tracks=[];
+let currentTrackId=null;
+let playQueue=[];
+let shuffleEnabled=false;
+let shuffleHistory=[];
+let shuffleHistoryIndex=-1;
+// AGGILLI_SHUFFLE_V1
+let playbackMode='none';
+// AGGILLI_TRACK_NAV_V1
+let genres={};
+const savedGenres = JSON.parse(
+ localStorage.getItem('aggilli-generos') || '{}'
+);
+Object.assign(genres, savedGenres);
+// AGGILLI_GENRE_EDITOR_V1
+let selectedGenre='Todos';
+const genreNames=['Todos','Rock','Rock Progressivo','Pop','MPB','Sertanejo','Forro','Eletronica','Outros'];
+const genreColors=['#285b45','#913e50','#7750a3','#a46b2e','#456d48','#a76b30','#286e83','#48565b','#536477'];
+function drawGenres(){
+ const box=document.getElementById('genreCards');
+ box.replaceChildren();
+ genreNames.forEach((name,i)=>{
+  const count=tracks.filter(t=>name==='Todos'||(genres[t.track_id]||'Outros')===name).length;
+  const btn=document.createElement('button');
+  btn.className='genre-card'+(selectedGenre===name?' selected':'');
+  btn.style.background=genreColors[i];
+  btn.textContent=name==='Forro'?'Forró':name==='Eletronica'?'Eletrônica':name;
+  const small=document.createElement('small');
+  small.textContent=count+' músicas';
+  btn.append(small);
+  btn.onclick=()=>{
+   selectedGenre=name;
+   document.getElementById('libraryHeading').textContent=
+    name==='Todos'?'Biblioteca musical':btn.firstChild.textContent;
+   drawGenres();
+   render();
+  };
+  box.append(btn);
+ });
+}
+
+function toggleShuffle(){
+ shuffleEnabled=!shuffleEnabled;
+ shuffleHistory=[];
+ shuffleHistoryIndex=-1;
+
+ if(shuffleEnabled && playbackMode==='track' && currentTrackId){
+  shuffleHistory=[currentTrackId];
+  shuffleHistoryIndex=0;
+ }
+
+ const btn=document.getElementById('shuffleBtn');
+ btn.textContent='⤨';
+ btn.style.color=shuffleEnabled?'#4ade80':'#e6edf0';
+ btn.setAttribute('aria-pressed',String(shuffleEnabled));
+}
+
+function moveTrack(direction){
+ if(playbackMode==='radio'){
+  alert('Na rádio ao vivo não é possível pular músicas.');
+  return;
+ }
+
+ if(!playQueue.length){
+  alert('Selecione uma música da biblioteca.');
+  return;
+ }
+
+ let id;
+
+ if(shuffleEnabled){
+  if(direction<0){
+   if(shuffleHistoryIndex<=0) return;
+   shuffleHistoryIndex--;
+   id=shuffleHistory[shuffleHistoryIndex];
+  }else if(shuffleHistoryIndex<shuffleHistory.length-1){
+   shuffleHistoryIndex++;
+   id=shuffleHistory[shuffleHistoryIndex];
+  }else{
+   const candidates=playQueue.filter(x=>x!==currentTrackId);
+   id=candidates.length
+    ? candidates[Math.floor(Math.random()*candidates.length)]
+    : playQueue[0];
+   shuffleHistory.push(id);
+   shuffleHistoryIndex=shuffleHistory.length-1;
+  }
+ }else{
+  const index=playQueue.indexOf(currentTrackId);
+  const nextIndex=index<0
+   ? 0
+   : (index+direction+playQueue.length)%playQueue.length;
+  id=playQueue[nextIndex];
+ }
+
+ const track=tracks.find(t=>t.track_id===id);
+ if(track) playTrack(track);
+}
+function nextTrack(){moveTrack(1)}
+function previousTrack(){moveTrack(-1)}
+function resumeAudio(){
+ if(!audio.src){
+  playRadio();
+  return;
+ }
+ audio.play().catch(console.error);
+}
+function pauseAudio(){
+ audio.pause();
+}
+function stopAudio(){
+ audio.pause();
+ const isRadio = audio.currentSrc.includes('radio.mp3');
+ if(isRadio){
+  audio.removeAttribute('src');
+  audio.load();
+  document.getElementById('now').textContent='Rádio interrompida';
+   playbackMode='none';
+ } else {
+  try { audio.currentTime=0; } catch(e){}
+  document.getElementById('now').textContent='Reprodução parada';
+ }
+}
+function playRadio(){
+ playbackMode='radio';
+ currentTrackId=null;
+ audio.src='radio.mp3';
+ document.getElementById('now').textContent='Aggilli Radio — Ao vivo';
+ refreshNow();
+ audio.play().catch(console.error);
+}
+function playTrack(track){
+ playbackMode='track';
+ currentTrackId=track.track_id;
+ if(shuffleEnabled){
+  const previous=shuffleHistory[shuffleHistoryIndex];
+  if(previous!==currentTrackId){
+   shuffleHistory=shuffleHistory.slice(0,shuffleHistoryIndex+1);
+   shuffleHistory.push(currentTrackId);
+   shuffleHistoryIndex=shuffleHistory.length-1;
+  }
+ }
+ audio.src='music-api'+track.download_url;
+ const parts=trackArtistTitle(track);
+ document.getElementById('now').textContent=parts.artist+' — '+parts.title;
+ refreshNow();
+ audio.play().catch(console.error);
+}
+
+function formatTime(seconds){
+ if(!Number.isFinite(seconds)||seconds<0)return '--:--';
+ const n=Math.floor(seconds);return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+}
+function trackSeconds(t){
+ const m=t.media||{};
+ const value=Number(m.length??m.duration??t.length??t.duration);
+ return Number.isFinite(value)&&value>0?value:null;
+}
+function trackArtistTitle(t){
+ const m=t.media||{};let artist=(m.artist||'').trim();let title=(m.title||m.text||'Sem título').trim();
+ if(!artist){
+  const clean=title.replace(/^\d{3}[_ ]+/, '');
+  const match=clean.match(/^(.+?)\s+-\s+(.+)$/);
+  if(match){artist=match[1].trim();title=match[2].trim();}
+ }
+ return {artist:artist||'Artista não informado',title};
+}
+function refreshNow(){
+ const active=tracks.find(t=>t.track_id===currentTrackId);
+ document.getElementById('nowGenre').textContent=playbackMode==='radio'?'Rádio ao vivo':active?(genres[currentTrackId]||'Outros'):'Aggilli Music';
+ const rows=document.querySelectorAll('.winamp-row');
+ rows.forEach(row=>{
+  const selected=playbackMode==='track'&&row.dataset.trackId===currentTrackId;
+  row.classList.toggle('active',selected);
+  const num=row.querySelector('.winamp-number');
+  if(num)num.textContent=selected?'♫':row.dataset.index;
+ });
+}
+function render(){
+ const q=document.getElementById('search').value.toLocaleLowerCase('pt-BR');
+ const box=document.getElementById('library');box.replaceChildren();
+ const filtered=tracks.filter(t=>{
+  const m=t.media||{};const parts=trackArtistTitle(t);
+  const searchText=[parts.artist,parts.title,m.text||''].join(' ').toLocaleLowerCase('pt-BR');
+  return (selectedGenre==='Todos'||(genres[t.track_id]||'Outros')===selectedGenre)&&searchText.includes(q);
+ });
+ playQueue=filtered.map(t=>t.track_id);
+ document.getElementById('status').textContent=filtered.length+' músicas';
+ filtered.forEach((t,i)=>{
+  const row=document.createElement('div');row.className='winamp-row';
+  row.dataset.trackId=t.track_id;row.dataset.index=String(i+1).padStart(2,'0');
+  row.tabIndex=0;row.setAttribute('role','button');
+  const parts=trackArtistTitle(t);
+  const num=document.createElement('span');num.className='winamp-number';num.textContent=row.dataset.index;
+  const info=document.createElement('div');info.className='winamp-info';
+  const artist=document.createElement('strong');artist.textContent=parts.artist;
+  const title=document.createElement('small');title.textContent=parts.title;
+  const select=document.createElement('select');select.className='edit-genre';select.title='Alterar gênero';select.setAttribute('aria-label','Gênero de '+parts.title);
+  genreNames.filter(x=>x!=='Todos').forEach(g=>{const option=document.createElement('option');option.value=g;option.textContent=g;select.append(option)});
+  select.value=genres[t.track_id]||'Outros';
+  select.onclick=e=>e.stopPropagation();
+  select.onchange=e=>{e.stopPropagation();genres[t.track_id]=select.value;localStorage.setItem('aggilli-generos',JSON.stringify(genres));drawGenres();render();refreshNow()};
+  info.append(artist,title,select);
+  const duration=document.createElement('span');duration.className='winamp-duration';duration.textContent=trackSeconds(t)===null?'--:--':formatTime(trackSeconds(t));
+  row.append(num,info,duration);row.onclick=()=>playTrack(t);
+  row.onkeydown=e=>{if(e.target===row&&(e.key==='Enter'||e.key===' ')){e.preventDefault();playTrack(t)}};
+  box.append(row);
+ });
+ refreshNow();
+}
+function togglePlayPause(){if(audio.paused)resumeAudio();else pauseAudio()}
+function updateProgress(){
+ const duration=audio.duration;
+ const current=audio.currentTime||0;
+ const seek=document.getElementById('seek');
+ const valid=Number.isFinite(duration)&&duration>0;
+ seek.disabled=!valid;
+ seek.value=valid?String(Math.round(current/duration*1000)):'0';
+ document.getElementById('timeDisplay').textContent=formatTime(current)+' / '+(valid?formatTime(duration):'--:--');
+}
+audio.addEventListener('timeupdate',updateProgress);
+audio.addEventListener('loadedmetadata',updateProgress);
+audio.addEventListener('durationchange',updateProgress);
+audio.addEventListener('play',()=>{document.getElementById('mainPlay').textContent='⏸';refreshNow()});
+audio.addEventListener('pause',()=>{document.getElementById('mainPlay').textContent='▶'});
+document.getElementById('seek').addEventListener('input',e=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=Number(e.target.value)/1000*audio.duration});
+audio.addEventListener('ended',()=>{
+ if(playbackMode==='track') nextTrack();
+});
+fetch('catalogo.json',{cache:'no-store'})
+ .then(r=>{if(!r.ok)throw Error(r.status);return r.json()})
+ .then(async data=>{
+  tracks=data;
+  document.getElementById('totalTracks').textContent=tracks.length;
+  try {
+   const r=await fetch('generos.json',{cache:'no-store'});
+   if(r.ok) genres=await r.json();
+  } catch(e){console.warn('Gêneros indisponíveis',e)}
+  drawGenres();
+  render();
+ })
+ .catch(e=>{
+  document.getElementById('status').textContent='Erro ao carregar biblioteca: '+e.message;
+ });
+</script>
+
+<script>
+// AGGILLI_DURACOES_V1
+(async function() {
+  try {
+    const resposta = await fetch('duracoes.json');
+    if (!resposta.ok) throw new Error(resposta.status);
+
+    const duracoes = await resposta.json();
+
+    function formatar(segundos) {
+      const s = Math.round(Number(segundos));
+      if (!Number.isFinite(s)) return '--:--';
+      return Math.floor(s / 60) + ':' +
+        String(s % 60).padStart(2, '0');
+    }
+
+    function atualizar() {
+      document.querySelectorAll('[data-track-id]').forEach(row => {
+        const id = row.dataset.trackId;
+        const elemento = row.querySelector('.winamp-duration');
+        if (elemento && duracoes[id] !== undefined) {
+          elemento.textContent = formatar(duracoes[id]);
+        }
+      });
+    }
+
+    atualizar();
+    new MutationObserver(atualizar).observe(
+      document.getElementById('library'),
+      {childList: true}
+    );
+  } catch (erro) {
+    console.warn('Durações indisponíveis:', erro);
+  }
+})();
+</script>
+
+<script>
+// AGGILLI_VOLUME_EQ_V1: Web Audio EQ, aplicado ao mesmo <audio> da rádio e biblioteca.
+(function(){
+  'use strict';
+  const player=document.getElementById('audio');
+  const volume=document.getElementById('aggilliVolume');
+  const volumeValue=document.getElementById('aggilliVolumeValue');
+  const mute=document.getElementById('aggilliMute');
+  const toggle=document.getElementById('aggilliEqToggle');
+  const panel=document.getElementById('aggilliEqPanel');
+  const preset=document.getElementById('aggilliPreset');
+  const status=document.getElementById('aggilliEqStatus');
+  const bands=['Bass','Mid','Treble'];
+  const presets={flat:[0,0,0],rock:[4,-2,4],pop:[-1,3,3],bass:[8,-1,0],vocal:[-3,5,2]};
+  let context=null,filters=null,analyser=null;
+  function readVolume(){
+    try {const raw=localStorage.getItem('aggilli-volume');if(raw===null)return 75;const v=Number(raw);return Number.isFinite(v)&&v>=0&&v<=100?v:75;}catch(e){return 75;}
+  }
+  function save(key,value){try{localStorage.setItem(key,String(value));}catch(e){}}
+  function setVolume(value){
+    const v=Math.max(0,Math.min(100,Number(value)||0));
+    player.volume=v/100;volume.value=String(v);volumeValue.textContent=v+'%';
+    mute.textContent=player.muted||v===0?'🔇':'🔊';
+    mute.setAttribute('aria-label',player.muted?'Ativar som':'Silenciar');
+    save('aggilli-volume',v);
+  }
+  setVolume(readVolume());
+  volume.addEventListener('input',()=>{player.muted=false;setVolume(volume.value)});
+  mute.addEventListener('click',()=>{player.muted=!player.muted;setVolume(volume.value)});
+  toggle.addEventListener('click',()=>{panel.hidden=!panel.hidden;toggle.setAttribute('aria-expanded',String(!panel.hidden))});
+  function updateBands(values){
+    bands.forEach((name,i)=>{
+      const slider=document.getElementById('aggilli'+name);
+      slider.value=String(values[i]);
+      document.getElementById('aggilli'+name+'Value').textContent=values[i]+' dB';
+      if(filters)filters[i].gain.value=values[i];
+    });
+    save('aggilli-eq-bands',JSON.stringify(values));
+  }
+  function currentBands(){return bands.map(name=>Number(document.getElementById('aggilli'+name).value))}
+  function choosePreset(name){updateBands(presets[name]||presets.flat);preset.value=name;save('aggilli-eq-preset',name)}
+  preset.addEventListener('change',()=>choosePreset(preset.value));
+  document.getElementById('aggilliEqReset').addEventListener('click',()=>choosePreset('flat'));
+  bands.forEach(name=>document.getElementById('aggilli'+name).addEventListener('input',()=>{
+    preset.value='flat';save('aggilli-eq-preset','flat');updateBands(currentBands());
+  }));
+  try {
+    const saved=JSON.parse(localStorage.getItem('aggilli-eq-bands')||'null');
+    if(Array.isArray(saved)&&saved.length===3&&saved.every(x=>Number.isFinite(x)&&x>=-12&&x<=12))updateBands(saved);
+    else choosePreset('flat');
+    const name=localStorage.getItem('aggilli-eq-preset');if(name&&presets[name])preset.value=name;
+  }catch(e){choosePreset('flat')}
+  async function activate(){
+    const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+    if(!AudioContextClass){status.textContent='Equalizador indisponível neste navegador.';return}
+    try{
+      if(!context){
+        context=new AudioContextClass();
+        const source=context.createMediaElementSource(player);
+        const low=context.createBiquadFilter();low.type='lowshelf';low.frequency.value=180;
+        const mid=context.createBiquadFilter();mid.type='peaking';mid.frequency.value=1000;mid.Q.value=0.8;
+        const high=context.createBiquadFilter();high.type='highshelf';high.frequency.value=4500;
+        source.connect(low);low.connect(mid);mid.connect(high);analyser=context.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=0.78;
+         high.connect(analyser);analyser.connect(context.destination);
+         initSpectrum();
+        filters=[low,mid,high];updateBands(currentBands());
+      }
+      if(context.state==='suspended')await context.resume();
+      status.textContent=context.state==='running'?'Equalizador ativo':'Toque em reproduzir para ativar o equalizador.';
+    }catch(err){status.textContent='Não foi possível ativar o equalizador.';console.warn('Aggilli EQ:',err)}
+  }
+   // AGGILLI_SPECTRUM_V1 — usa o mesmo AudioContext do equalizador.
+   function initSpectrum(){
+     const canvas=document.getElementById('aggilliSpectrum');
+     if(!canvas||canvas.dataset.ready)return;
+     const ctx=canvas.getContext('2d');if(!ctx)return;
+     canvas.dataset.ready='1';
+     const bins=new Uint8Array(analyser.frequencyBinCount);
+     const peaks=[];
+     const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+     let last=0;
+     function frame(time){
+       requestAnimationFrame(frame);
+       if(reduced&&time-last<150)return;
+       if(!reduced&&time-last<30)return;
+       last=time;
+       const rect=canvas.getBoundingClientRect();
+       if(!rect.width||!rect.height)return;
+       const dpr=Math.min(window.devicePixelRatio||1,2);
+       const w=Math.round(rect.width*dpr),h=Math.round(rect.height*dpr);
+       if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
+       ctx.clearRect(0,0,w,h);
+       ctx.fillStyle='#07110d';ctx.fillRect(0,0,w,h);
+       ctx.strokeStyle='rgba(66,125,82,.12)';ctx.lineWidth=dpr;
+       for(let y=0;y<h;y+=24*dpr){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+       const active=context.state==='running'&&!player.paused;
+       if(active)analyser.getByteFrequencyData(bins);else bins.fill(0);
+       const count=Math.max(16,Math.min(92,Math.floor(rect.width/9)));
+       const slot=w/count,barW=Math.max(2*dpr,slot-2*dpr);
+       const maxH=h-36*dpr;
+       const gradient=ctx.createLinearGradient(0,h,0,h-maxH);
+       gradient.addColorStop(0,'#176f43');gradient.addColorStop(.5,'#4ade80');gradient.addColorStop(1,'#b6ffd0');
+       ctx.fillStyle=gradient;
+       for(let i=0;i<count;i++){
+         // Escala não linear para dar mais espaço às frequências graves.
+         const start=Math.floor(Math.pow(i/count,1.65)*(bins.length*.75));
+         const end=Math.max(start+1,Math.floor(Math.pow((i+1)/count,1.65)*(bins.length*.75)));
+         let energy=0;
+         for(let j=start;j<end;j++)energy=Math.max(energy,bins[j]);
+         const level=active?Math.pow(energy/255,1.4):0;
+         const bh=level*maxH;
+         const x=i*slot+1*dpr;
+         if(bh>1){ctx.fillRect(x,h-bh,barW,bh)}
+         peaks[i]=Math.max(bh, (peaks[i]||0)-2.3*dpr);
+         if(peaks[i]>2){ctx.fillStyle='#a8f7be';ctx.fillRect(x,h-peaks[i]-3*dpr,barW,2*dpr);ctx.fillStyle=gradient}
+       }
+       document.getElementById('aggilliSpectrumState').textContent=active?'ÁUDIO EM TEMPO REAL':'AGUARDANDO ÁUDIO';
+     }
+     requestAnimationFrame(frame);
+   }
+  // Inicialização por gesto do usuário: atende às restrições de autoplay.
+  document.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.winamp-row,.music-controls,#aggilliEqPanel'))void activate();
+  },{capture:true});
+  document.addEventListener('keydown',e=>{
+    if((e.key==='Enter'||e.key===' ')&&e.target.closest('.winamp-row,.music-controls'))void activate();
+  },{capture:true});
+  player.addEventListener('play',()=>{void activate()});
+})();
+</script>
+
+
+<script>
+/* AGGILLI_UPLOAD_JS_V1 */
+(() => {
+  const files = document.getElementById('aggilliUploadFiles');
+  const button = document.getElementById('aggilliUploadButton');
+  const status = document.getElementById('aggilliUploadStatus');
+  const panel = document.getElementById('aggilliUploadProgress');
+  const bar = document.getElementById('aggilliUploadBar');
+  const percent = document.getElementById('aggilliUploadPercent');
+  const filename = document.getElementById('aggilliUploadFilename');
+  const total = document.getElementById('aggilliUploadTotal');
+
+  button.disabled = true;
+
+  files.addEventListener('change', () => {
+    button.disabled = files.files.length === 0;
+    status.textContent = files.files.length
+      ? files.files.length + ' música(s) selecionada(s).'
+      : 'Selecione suas músicas para começar.';
+  });
+
+  function send(file, index, count) {
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      const data = new FormData();
+      data.append('file', file);
+
+      filename.textContent = file.name;
+      total.textContent = `${index + 1} de ${count} músicas`;
+      bar.value = 0;
+      percent.textContent = '0%';
+
+      xhr.open('POST', 'upload-api/upload');
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const value = Math.round(event.loaded * 100 / event.total);
+          bar.value = value;
+          percent.textContent = value + '%';
+        }
+      };
+
+      xhr.onload = () => {
+        let result = {};
+        try { result = JSON.parse(xhr.responseText); } catch (_) {}
+
+        resolve({
+          ok: xhr.status >= 200 && xhr.status < 300,
+          message: result.detail || result.message || `HTTP ${xhr.status}`
+        });
+      };
+
+      xhr.onerror = () => resolve({
+        ok: false,
+        message: 'Falha de conexão'
+      });
+
+      xhr.ontimeout = () => resolve({
+        ok: false,
+        message: 'Tempo de envio excedido'
+      });
+
+      xhr.timeout = 240000;
+      xhr.send(data);
+    });
+  }
+
+  button.addEventListener('click', async () => {
+    const selected = Array.from(files.files);
+    if (!selected.length) return;
+
+    button.disabled = true;
+    files.disabled = true;
+    panel.style.display = 'block';
+
+    let success = 0;
+    let failed = 0;
+    const errors = [];
+
+    for (let i = 0; i < selected.length; i++) {
+      const file = selected[i];
+
+      if (!file.name.toLowerCase().endsWith('.mp3')
+          || file.size > 100 * 1024 * 1024) {
+        failed++;
+        status.textContent = `${file.name}: formato ou tamanho inválido`;
+        continue;
+      }
+
+      status.textContent = `Enviando ${file.name}...`;
+
+      const result = await send(file, i, selected.length);
+
+      if (result.ok) {
+        success++;
+        status.textContent = `${file.name}: enviado com sucesso`;
+      } else {
+        failed++;
+        errors.push(`${file.name}: ${result.message}`);
+      }
+    }
+
+    status.textContent =
+      `Concluído: ${success} enviado(s), ${failed} com erro.` +
+      (errors.length ? ` Motivo: ${errors.join(' | ')}` : '');
+
+    files.disabled = false;
+    files.value = '';
+    button.disabled = true;
+  });
+})();
+</script>
+
+</body>
+</html>
