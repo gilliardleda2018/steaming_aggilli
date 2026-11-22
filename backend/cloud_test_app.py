@@ -4,7 +4,7 @@ Start with: uvicorn cloud_test_app:app --host 127.0.0.1 --port 8450
 Never expose this test server to the public internet.
 """
 from pathlib import Path
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.responses import HTMLResponse
 from main import require_upload_auth
 from cloud_stream import router
@@ -31,4 +31,14 @@ async def test_player():
             "X-Content-Type-Options": "nosniff",
             "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; media-src 'self'; connect-src 'self';",
         },
+    )
+
+
+@app.exception_handler(401)
+async def authentication_required(request: Request, exc):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=401,
+        content={"detail": "Autenticacao necessaria"},
+        headers={"WWW-Authenticate": 'Basic realm="Aggilli Music - Teste"'},
     )
