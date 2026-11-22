@@ -282,6 +282,7 @@ function showPlaybackError(media,reason){
  document.getElementById('status').textContent='Falha na reprodução: '+message;
  console.warn('Aggilli playback', {code,src:media.currentSrc,reason});
 }
+let playbackRequestId=0;
 let tracks=[];
 let currentTrackId=null;
 let playQueue=[];
@@ -406,6 +407,7 @@ function stopAudio(){
  }
 }
 function playRadio(){
+ playbackRequestId++;
  hideCloudVideo();
  playbackMode='radio';
  currentTrackId=null;
@@ -414,7 +416,8 @@ function playRadio(){
  refreshNow();
  audio.play().catch(console.error);
 }
-function playTrack(track){
+async function playTrack(track){
+ const requestId=++playbackRequestId;
  playbackMode='track';
  currentTrackId=track.track_id;
  if(shuffleEnabled){
@@ -428,12 +431,31 @@ function playTrack(track){
  const isCloudVideo=track.source==='nextcloud'&&track.format==='mp4';
  audio.pause();
  hideCloudVideo();
+ let src=mediaUrl(track);
+ if(track.source==='nextcloud'&&cloudPreview){
+  try{
+   document.getElementById('status').textContent='Autorizando reprodução da nuvem…';
+   const response=await fetch('/playback-token',{
+    method:'POST',credentials:'same-origin',cache:'no-store',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({filename:track.filename})
+   });
+   if(!response.ok)throw new Error('Token HTTP '+response.status);
+   const signed=await response.json();
+   if(!signed.token||!signed.expires)throw new Error('Resposta de token inválida');
+   src='/signed-cloud/'+encodeURIComponent(track.filename)+'?expires='+encodeURIComponent(signed.expires)+'&token='+encodeURIComponent(signed.token);
+  }catch(error){
+   if(requestId===playbackRequestId)document.getElementById('status').textContent='Não foi possível autorizar a faixa: '+error.message;
+   return;
+  }
+ }
+ if(requestId!==playbackRequestId)return;
  if(isCloudVideo){
   audio.removeAttribute('src');audio.load();
   cloudVideo.hidden=false;cloudVideo.style.display='block';
-  cloudVideo.src=mediaUrl(track);
+  cloudVideo.src=src;
  }else{
-  audio.src=mediaUrl(track);
+  audio.src=src;
  }
  const parts=trackArtistTitle(track);
  document.getElementById('now').textContent=parts.artist+' — '+parts.title;
