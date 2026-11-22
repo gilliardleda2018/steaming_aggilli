@@ -238,6 +238,11 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
  <div id="library"></div>
 
 
+<!-- AGGILLI_NEXTCLOUD_SYNC_BUTTON_V1 -->
+<section style="margin:14px 0;padding:14px;border:1px solid #365147;border-radius:10px;background:#111e19;color:#d8f7e1">
+ <button type="button" id="aggilliSyncCloud" style="padding:11px 16px;border-radius:8px;background:#4ade80;color:#07150c;border:0;font-weight:700;cursor:pointer">☁ Sincronizar Nextcloud → AzuraCast</button>
+ <span id="aggilliSyncCloudStatus" role="status" aria-live="polite" style="display:block;margin-top:8px;font-size:12px;color:#aebdb7">Requer autenticação administrativa.</span>
+</section>
 <!-- AGGILLI_UPLOAD_PANEL_V2 -->
 <section id="aggilliUploadPanel" style="margin:16px 0;padding:20px;border:1px solid #40546a;border-radius:12px;background:#111a27;color:#e7eef8">
   <h3 style="margin:0 0 8px">🎵 Adicionar músicas à biblioteca</h3>
@@ -904,5 +909,23 @@ fetch('catalogo.json',{cache:'no-store'})
 })();
 </script>
 
+<script>
+/* AGGILLI_NEXTCLOUD_SYNC_BUTTON_V1 */
+(() => {
+ const button=document.getElementById('aggilliSyncCloud');
+ const status=document.getElementById('aggilliSyncCloudStatus');
+ button.addEventListener('click',async()=>{
+  button.disabled=true;
+  status.textContent='Solicitando sincronização ao servidor…';
+  try{
+   const response=await fetch('upload-api/sync-nextcloud',{method:'POST',credentials:'same-origin',cache:'no-store'});
+   const body=await response.json().catch(()=>({}));
+   if(!response.ok)throw Error(body.detail||'HTTP '+response.status);
+   status.textContent='Solicitação recebida. O Debian está processando as mídias; acompanhe o serviço para confirmar a conclusão.';
+  }catch(error){status.textContent='Não foi possível iniciar: '+error.message}
+  finally{button.disabled=false}
+ });
+})();
+</script>
 </body>
 </html>
