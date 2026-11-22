@@ -5,6 +5,7 @@ validating authorization, proxy rules and browser playback. Credentials stay
 server-side; the browser never connects to WebDAV directly.
 """
 import os
+import base64
 from contextlib import asynccontextmanager
 from pathlib import PurePosixPath
 from urllib.parse import quote
@@ -70,13 +71,15 @@ async def proxy_media(filename: str, method: str, range_header: str | None):
         headers["Range"] = range_header
 
     url = remote_url(filename)
+    basic = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
+    headers["Authorization"] = f"Basic {basic}"
     own_client = _shared_client is None
     client = _shared_client or httpx.AsyncClient(
         timeout=httpx.Timeout(connect=10, read=60, write=10, pool=10),
         follow_redirects=False,
     )
     try:
-        request = client.build_request(method, url, headers=headers, auth=httpx.BasicAuth(username, password))
+        request = client.build_request(method, url, headers=headers)
         upstream = await client.send(request, stream=True)
     except httpx.HTTPError:
         if own_client:
