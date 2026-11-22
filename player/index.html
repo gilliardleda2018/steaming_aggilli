@@ -275,12 +275,24 @@ function mediaUrl(t){
  if(t.source==='nextcloud')return '/cloud/'+encodeURIComponent(t.filename);
  return cloudPreview?'https://server.taila400aa.ts.net/music/music-api'+t.download_url:'music-api'+t.download_url;
 }
-function showPlaybackError(media,reason){
+async function showPlaybackError(media,reason){
  const code=media.error?.code;
  const details={1:'reprodução interrompida',2:'falha de rede ou autenticação',3:'formato ou codec incompatível',4:'origem indisponível ou formato não suportado'};
+ const status=document.getElementById('status');
  const message=reason||details[code]||'não foi possível iniciar';
- document.getElementById('status').textContent='Falha na reprodução: '+message;
- console.warn('Aggilli playback', {code,src:media.currentSrc,reason});
+ const source=media.currentSrc||media.src;
+ if(!source){status.textContent='Falha na reprodução: origem vazia';return}
+ status.textContent='Falha na reprodução: '+message+' — verificando resposta HTTP…';
+ try{
+  const response=await fetch(source,{headers:{Range:'bytes=0-1023'},cache:'no-store',credentials:'same-origin'});
+  const type=response.headers.get('content-type')||'desconhecido';
+  const contentRange=response.headers.get('content-range')||'ausente';
+  const info='HTTP '+response.status+' · '+type+' · Range '+(contentRange==='ausente'?'ausente':'presente');
+  status.textContent='Falha na reprodução: '+message+' ('+info+')';
+  console.warn('Aggilli media diagnostic',{code,http:response.status,type,contentRangePresent:contentRange!=='ausente',readyState:media.readyState,networkState:media.networkState,reason});
+ }catch(error){
+  status.textContent='Falha na reprodução: '+message+' (diagnóstico de rede: '+error.message+')';
+ }
 }
 let playbackRequestId=0;
 let tracks=[];
