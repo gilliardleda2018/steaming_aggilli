@@ -252,7 +252,7 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
  <div id="aggilliDjResults" style="max-height:280px;overflow:auto"></div>
  <details id="aggilliDjCommercial" style="margin:10px 0;border-top:1px solid #355047;padding-top:10px">
  <summary style="cursor:pointer;font-size:12px;color:#b8dfd0">Conectar DJ ANI comercial (homologação)</summary>
- <p style="font-size:11px;color:#a5b8b0">Apenas HTTPS. Token temporário mantido nesta página. Músicas comerciais ainda não são reproduzidas pelo player público.</p>
+ <p style="font-size:11px;color:#a5b8b0">Apenas HTTPS. Token temporário mantido nesta página. A reprodução comercial está disponível na prévia autorizada.</p>
  <label for="aggilliDjApi" style="font-size:12px">URL HTTPS da API comercial</label>
  <input id="aggilliDjApi" type="url" placeholder="https://staging.exemplo.com" autocomplete="off" style="margin:4px 0;width:100%;border-radius:8px">
  <label for="aggilliDjToken" style="font-size:12px">Token do ouvinte</label>
@@ -334,6 +334,10 @@ async function showPlaybackError(media,reason){
  const details={1:'reprodução interrompida',2:'falha de rede ou autenticação',3:'formato ou codec incompatível',4:'origem indisponível ou formato não suportado'};
  const status=document.getElementById('status');
  const message=reason||details[code]||'não foi possível iniciar';
+ if(playbackMode==='commercial'){
+  status.textContent='Falha na reprodução protegida. Selecione a faixa novamente.';
+  return;
+ }
  const source=media.currentSrc||media.src;
  if(!source){status.textContent='Falha na reprodução: origem vazia';return}
  status.textContent='Falha na reprodução: '+message+' — verificando resposta HTTP…';
@@ -499,6 +503,7 @@ function pauseAudio(){
  activeMedia().pause();
 }
 function stopAudio(){
+ playbackRequestId++;
  activeMedia().pause();
  const isRadio = audio.currentSrc.includes('radio.mp3');
  if(isRadio){
@@ -1099,8 +1104,43 @@ fetch('catalogo.json',{cache:'no-store'})
  const status=document.getElementById('aggilliDjStatus');
  const prompt=document.getElementById('aggilliDjPrompt');
  if(!api||!token||!run||!clear||!output||!status||!prompt)return;
- clear.addEventListener('click',()=>{api.value='';token.value='';output.replaceChildren();status.textContent='Acesso de homologação limpo.';});
+ let revision=0;
+ async function playCommercial(track, endpoint, bearer, sessionRevision){
+  const requestId=++playbackRequestId;
+  const path=endpoint+'/listeners/playback/'+encodeURIComponent(track.track_id);
+  status.textContent='Autorizando faixa…';
+  try{
+   const response=await fetch(path+'/grant',{
+    method:'POST',redirect:'error',cache:'no-store',credentials:'omit',
+    headers:{'Authorization':'Bearer '+bearer}
+   });
+   if(!response.ok)throw Error('Reprodução protegida indisponível (HTTP '+response.status+').');
+   const {grant}=await response.json();
+   if(typeof grant!=='string'||!/^[a-f0-9]{64}\.[0-9]{1,12}\.[a-f0-9]{64}$/.test(grant))
+    throw Error('Autorização de reprodução inválida.');
+   if(requestId!==playbackRequestId||sessionRevision!==revision)return;
+   hideCloudVideo();
+   audio.pause();
+   playbackMode='commercial';
+   currentTrackId=null;
+   audio.src=path+'/audio?grant='+encodeURIComponent(grant);
+   document.getElementById('now').textContent=String(track.artist||'')+' — '+String(track.title||'');
+   status.textContent='Reprodução protegida · DJ ANI';
+   audio.play().catch(error=>{if(requestId===playbackRequestId)handlePlayRejection(audio,error);});
+  }catch(error){
+   if(requestId===playbackRequestId&&sessionRevision===revision)status.textContent=error.message;
+  }
+ }
+ clear.addEventListener('click',()=>{
+  revision++;
+  api.value='';token.value='';output.replaceChildren();
+  if(playbackMode==='commercial'){
+   stopAudio();audio.removeAttribute('src');audio.load();playbackMode='none';
+  }
+  status.textContent='Acesso de homologação limpo.';
+ });
  run.addEventListener('click',async()=>{
+  const sessionRevision=++revision;
   run.disabled=true;
   output.replaceChildren();
   try{
@@ -1110,14 +1150,18 @@ fetch('catalogo.json',{cache:'no-store'})
    if(base.protocol!=='https:'||base.username||base.password||base.search||base.hash)
     throw Error('Informe uma URL HTTPS válida sem parâmetros.');
    if(token.value.length<32)throw Error('Informe um token de homologação válido.');
+   const bearer=token.value;
+   const endpoint=base.href.replace(/\/$/,'');
+   const canPlay=base.origin===location.origin&&new URLSearchParams(location.search).get('commercialPreview')==='1';
    status.textContent='Consultando o DJ ANI comercial...';
    const response=await fetch(base.href.replace(/\/$/,'')+'/listeners/dj/session',{
     method:'POST',redirect:'error',cache:'no-store',
-    headers:{'Authorization':'Bearer '+token.value,'Content-Type':'application/json'},
+    headers:{'Authorization':'Bearer '+bearer,'Content-Type':'application/json'},
     body:JSON.stringify({prompt:query,territory:'BR',limit:10})
    });
    if(!response.ok)throw Error('API comercial retornou HTTP '+response.status);
    const data=await response.json();
+   if(sessionRevision!==revision)return;
    if(!data||!Array.isArray(data.tracks))throw Error('Resposta inválida da API comercial.');
    const title=document.createElement('strong');
    title.textContent=String(data.title||'Sessão DJ ANI').slice(0,100);
@@ -1129,9 +1173,16 @@ fetch('catalogo.json',{cache:'no-store'})
     name.textContent=(i+1)+'. '+String(track.artist||'')+' — '+String(track.title||'');
     const reason=document.createElement('div');reason.textContent=String(track.reason||'');
     reason.style.color='#a5b8b0';line.append(name,reason);output.append(line);
+    if(canPlay&&typeof track.track_id==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(track.track_id)){
+     const button=document.createElement('button');
+     button.type='button';button.textContent='Reproduzir';
+     button.setAttribute('aria-label','Reproduzir '+String(track.title||'faixa'));
+     button.addEventListener('click',()=>playCommercial(track,endpoint,bearer,sessionRevision));
+     line.append(button);
+    }
    });
-   status.textContent='DJ ANI: '+data.tracks.length+' sugestões comerciais autorizadas para catálogo. Reprodução protegida ainda indisponível.';
-  }catch(error){status.textContent=error.message;}
+   status.textContent='DJ ANI: '+data.tracks.length+' sugestões comerciais.';
+  }catch(error){if(sessionRevision===revision)status.textContent=error.message;}
   finally{run.disabled=false;}
  });
 })();

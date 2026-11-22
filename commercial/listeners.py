@@ -93,6 +93,9 @@ class ListenerStore:
         if not isinstance(token, str) or len(token) > 256 or len(token) < 32:
             return None
         digest = hashlib.sha256(token.encode()).hexdigest()
+        return self.authenticate_session_hash(digest)
+
+    def authenticate_session_hash(self, digest: str):
         with self.connect() as db:
             row = db.execute("""SELECT l.id,l.status,s.expires_at FROM sessions s
                 JOIN listeners l ON l.id=s.listener_id WHERE s.token_hash=?""", (digest,)).fetchone()

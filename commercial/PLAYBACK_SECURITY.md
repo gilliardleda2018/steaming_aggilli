@@ -14,8 +14,8 @@ Inputs must come from server-verified identity, billing and rights records:
 ## Not implemented yet
 - Account registration, secure password hashing or OAuth/OIDC identity.
 - Billing checkout, webhook verification and subscription persistence.
-- Player integration, short-lived playback URLs, geographic verification,
-  rate limiting, device management and DRM where contracts require it.
+- Geographic verification, rate limiting, device management and DRM where
+  contracts require it.
 - Individual user consent, LGPD policies, customer support and cancellation.
 
 Never rely on a client-supplied `subscription`, `listener`, `territory`
@@ -35,3 +35,14 @@ letters, numbers, hyphens and underscores for the ID. Configure
 `AGGILLI_COMMERCIAL_PLAYBACK_TERRITORY` with the staging territory (e.g. `BR`).
 The server uses this value for rights decisions. Geographic verification of
 the listener is still required before public commercial use.
+
+For native audio playback in the same player, configure a separate
+`AGGILLI_COMMERCIAL_PLAYBACK_SECRET` with at least 32 random bytes. The
+authenticated grant endpoint issues a 10-minute capability for one track
+and the current listener session. Every audio request checks that session,
+subscription and rights again. Selecting the track again obtains a new grant.
+
+In staging, serve the listener API and player behind the same HTTPS origin,
+with redirects disabled for the audio routes and query strings omitted from
+their access logs. Open the player with `?commercialPreview=1` and enter the
+same-origin API base and a staging listener token in the DJ ANI panel.

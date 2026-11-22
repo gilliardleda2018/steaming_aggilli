@@ -104,6 +104,7 @@ class ListenerTests(unittest.TestCase):
         with patch.dict(os.environ, {
             "AGGILLI_COMMERCIAL_MEDIA_DIR": str(media_dir),
             "AGGILLI_COMMERCIAL_PLAYBACK_TERRITORY": "BR",
+            "AGGILLI_COMMERCIAL_PLAYBACK_SECRET": "S" * 32,
         }):
             self.assertEqual(self.client.get(url).status_code, 401)
             self.assertEqual(self.client.get(url, headers=headers).status_code, 403)
@@ -117,8 +118,20 @@ class ListenerTests(unittest.TestCase):
             self.assertEqual(result.headers["Content-Range"], "bytes 2-4/10")
             self.assertEqual(result.headers["Cache-Control"], "private, no-store")
             self.assertEqual(self.client.get(url, headers={**headers, "Range": "bytes=20-"}).status_code, 416)
+            self.assertEqual(self.client.post(url + "/grant").status_code, 401)
+            grant = self.client.post(url + "/grant", headers=headers).json()["grant"]
+            audio = url + "/audio"
+            params = {"grant": grant}
+            self.assertEqual(self.client.get(audio, params=params, headers={"Range": "bytes=2-4"}).content, b"234")
+            self.assertEqual(self.client.get(audio.replace("song1", "song2"), params=params).status_code, 403)
+            with patch.object(listener_api.time, "time", return_value=int(grant.split(".")[1])):
+                self.assertEqual(self.client.get(audio, params=params).status_code, 403)
             rights.revoke("song1")
             self.assertEqual(self.client.get(url, headers=ranged).status_code, 403)
+            self.assertEqual(self.client.get(audio, params=params).status_code, 403)
+            rights.put("song1", RIGHTS)
+            self.client.post("/listeners/logout", headers=headers)
+            self.assertEqual(self.client.get(audio, params=params).status_code, 401)
 
 if __name__ == "__main__":
     unittest.main()

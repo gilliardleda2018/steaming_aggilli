@@ -1,11 +1,14 @@
 """Commercial staging API for listeners, catalog decisions and private audio."""
+import hashlib
+import hmac
 import os
 import re
 import secrets
 import sqlite3
+import time
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -107,6 +110,13 @@ def check_access(track_id: str, territory: str = "BR", listener=Depends(current_
 @app.head("/listeners/playback/{track_id}")
 def playback(track_id: str, listener=Depends(current_listener)):
     """Authorize each media request against the private staging library."""
+    return FileResponse(playback_path(track_id, listener), media_type="audio/mpeg", headers={
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+    })
+
+
+def playback_path(track_id, listener):
     media_dir = os.environ.get("AGGILLI_COMMERCIAL_MEDIA_DIR")
     territory = os.environ.get("AGGILLI_COMMERCIAL_PLAYBACK_TERRITORY", "")
     if not media_dir or not re.fullmatch(r"[A-Z]{2}", territory):
@@ -126,10 +136,46 @@ def playback(track_id: str, listener=Depends(current_listener)):
     path = Path(media_dir) / f"{track_id}.mp3"
     if path.is_symlink() or not path.is_file():
         raise HTTPException(404, "Track unavailable")
-    return FileResponse(path, media_type="audio/mpeg", headers={
-        "Cache-Control": "private, no-store",
-        "X-Content-Type-Options": "nosniff",
-    })
+    return path
+
+
+PLAYBACK_GRANT_TTL = 600
+
+
+def playback_signature(track_id, session_hash, expires):
+    key = os.environ.get("AGGILLI_COMMERCIAL_PLAYBACK_SECRET", "").encode()
+    if len(key) < 32:
+        raise HTTPException(503, "Playback grants not configured")
+    return hmac.new(key, f"{track_id}:{session_hash}:{expires}".encode(), "sha256").hexdigest()
+
+
+@app.post("/listeners/playback/{track_id}/grant")
+def playback_grant(track_id: str, response: Response, authorization: str = Header(), listener=Depends(current_listener)):
+    playback_path(track_id, listener)
+    session_hash = hashlib.sha256(authorization[7:].encode()).hexdigest()
+    expires = int(time.time()) + PLAYBACK_GRANT_TTL
+    signature = playback_signature(track_id, session_hash, expires)
+    response.headers["Cache-Control"] = "private, no-store"
+    return {"grant": f"{session_hash}.{expires}.{signature}"}
+
+
+@app.get("/listeners/playback/{track_id}/audio")
+@app.head("/listeners/playback/{track_id}/audio")
+def playback_with_grant(track_id: str, grant: str):
+    match = re.fullmatch(r"([a-f0-9]{64})\.([0-9]{1,12})\.([a-f0-9]{64})", grant)
+    if not match or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", track_id):
+        raise HTTPException(403, "Invalid playback grant")
+    session_hash, expiry, signature = match.groups()
+    expires = int(expiry)
+    now = int(time.time())
+    if not now < expires <= now + PLAYBACK_GRANT_TTL or not hmac.compare_digest(
+        signature, playback_signature(track_id, session_hash, expires)
+    ):
+        raise HTTPException(403, "Invalid or expired playback grant")
+    listener = store().authenticate_session_hash(session_hash)
+    if not listener:
+        raise HTTPException(401, "Invalid or expired session")
+    return playback(track_id, listener)
 
 
 @app.put("/admin/subscriptions", dependencies=[Depends(admin)])

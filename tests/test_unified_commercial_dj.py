@@ -21,7 +21,10 @@ class UnifiedCommercialDjTests(unittest.TestCase):
     def test_commercial_results_do_not_invoke_public_player(self):
         commercial = HTML.split('/* AGGILLI_UNIFIED_COMMERCIAL_DJ_V1 */', 1)[1]
         self.assertNotIn('playTrack(', commercial)
-        self.assertNotIn('audio.src', commercial)
+        self.assertIn("path+'/grant'", commercial)
+        self.assertIn("audio.src=path+'/audio?grant='+encodeURIComponent(grant)", commercial)
+        self.assertIn("base.origin===location.origin", commercial)
+        self.assertIn("get('commercialPreview')==='1'", commercial)
         self.assertNotIn('playQueue=', commercial)
         self.assertNotIn('innerHTML', commercial)
 
