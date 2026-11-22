@@ -152,3 +152,41 @@ async def process_upload(file: UploadFile):
         "filename": filename,
         "message": "Arquivo recebido pelo AzuraCast",
     })
+
+
+# Manual Nextcloud -> AzuraCast sync. Requires a narrowly scoped sudoers rule
+# for the upload service user; without it the endpoint fails closed.
+SYNC_UNIT = "aggilli-nextcloud-sync.service"
+
+@app.post("/sync-nextcloud")
+async def start_nextcloud_sync(_: None = Depends(require_upload_auth)):
+    import subprocess
+    try:
+        result = await asyncio.to_thread(
+            subprocess.run,
+            ["/usr/bin/sudo", "-n", "/usr/bin/systemctl", "start", "--no-block", SYNC_UNIT],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise HTTPException(503, detail="Sincronização não configurada no servidor")
+    if result.returncode:
+        raise HTTPException(503, detail="Sincronização indisponível: verificar serviço e permissão administrativa")
+    return {"accepted": True, "message": "Sincronização solicitada ao Debian"}
+
+
+@app.get("/sync-nextcloud/status")
+async def nextcloud_sync_status(_: None = Depends(require_upload_auth)):
+    import subprocess
+    try:
+        result = await asyncio.to_thread(
+            subprocess.run,
+            ["/usr/bin/systemctl", "show", SYNC_UNIT, "--property=ActiveState,SubState,Result,ExecMainStatus"],
+            capture_output=True, text=True, timeout=8,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise HTTPException(503, detail="Estado indisponível")
+    if result.returncode:
+        raise HTTPException(503, detail="Serviço de sincronização não instalado")
+    data = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
+    return {"state": data.get("ActiveState", "unknown"), "substate": data.get("SubState", "unknown"),
+            "result": data.get("Result", "unknown"), "exit_code": data.get("ExecMainStatus", "")}
