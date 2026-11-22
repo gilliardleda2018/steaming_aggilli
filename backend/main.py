@@ -154,39 +154,33 @@ async def process_upload(file: UploadFile):
     })
 
 
-# Manual Nextcloud -> AzuraCast sync. Requires a narrowly scoped sudoers rule
-# for the upload service user; without it the endpoint fails closed.
-SYNC_UNIT = "aggilli-nextcloud-sync.service"
+# Requests are queued by the unprivileged upload API and consumed by a
+# separate root-owned systemd worker. Never run sudo from the web process.
+SYNC_QUEUE = Path("/var/lib/aggilli-music/sync-requests")
+SYNC_STATUS = Path("/var/lib/aggilli-music/sync-status.json")
+
 
 @app.post("/sync-nextcloud")
 async def start_nextcloud_sync(_: None = Depends(require_upload_auth)):
-    import subprocess
+    import os
+    import time
+    request = SYNC_QUEUE / "pending"
     try:
-        result = await asyncio.to_thread(
-            subprocess.run,
-            ["/usr/bin/sudo", "-n", "/usr/bin/systemctl", "start", "--no-block", SYNC_UNIT],
-            capture_output=True, text=True, timeout=10,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        raise HTTPException(503, detail="Sincronização não configurada no servidor")
-    if result.returncode:
-        raise HTTPException(503, detail="Sincronização indisponível: verificar serviço e permissão administrativa")
-    return {"accepted": True, "message": "Sincronização solicitada ao Debian"}
+        fd = os.open(str(request), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "w") as output:
+            output.write(str(int(time.time())) + "\\n")
+    except FileExistsError:
+        return {"accepted": True, "message": "Já existe uma sincronização aguardando processamento"}
+    except OSError:
+        raise HTTPException(503, detail="Fila indisponível ou sem permissão de escrita")
+    return {"accepted": True, "message": "Solicitação registrada para processamento"}
 
 
 @app.get("/sync-nextcloud/status")
 async def nextcloud_sync_status(_: None = Depends(require_upload_auth)):
-    import subprocess
+    import json
     try:
-        result = await asyncio.to_thread(
-            subprocess.run,
-            ["/usr/bin/systemctl", "show", SYNC_UNIT, "--property=ActiveState,SubState,Result,ExecMainStatus"],
-            capture_output=True, text=True, timeout=8,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        raise HTTPException(503, detail="Estado indisponível")
-    if result.returncode:
-        raise HTTPException(503, detail="Serviço de sincronização não instalado")
-    data = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
-    return {"state": data.get("ActiveState", "unknown"), "substate": data.get("SubState", "unknown"),
-            "result": data.get("Result", "unknown"), "exit_code": data.get("ExecMainStatus", "")}
+        status = json.loads(SYNC_STATUS.read_text())
+        return {k: status.get(k) for k in ("state", "updated_at", "message")}
+    except (FileNotFoundError, ValueError, OSError):
+        return {"state": "unknown", "message": "Nenhuma execução registrada"}
