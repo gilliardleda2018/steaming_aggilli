@@ -51,13 +51,14 @@ async def proxy_media(filename: str, method: str, range_header: str | None):
             raise HTTPException(416, detail="Unsupported byte range")
         headers["Range"] = range_header
 
+    url = remote_url(filename)
     client = httpx.AsyncClient(
         auth=httpx.BasicAuth(username, password),
         timeout=httpx.Timeout(connect=10, read=60, write=10, pool=10),
         follow_redirects=False,
     )
     try:
-        request = client.build_request(method, remote_url(filename), headers=headers)
+        request = client.build_request(method, url, headers=headers)
         upstream = await client.send(request, stream=True)
     except httpx.HTTPError:
         await client.aclose()
@@ -74,6 +75,12 @@ async def proxy_media(filename: str, method: str, range_header: str | None):
         if status == 416:
             raise HTTPException(416, detail="Range not satisfiable")
         raise HTTPException(502, detail=f"Cloud storage HTTP {status}")
+
+    # A server ignoring Range could stream an entire multi-GB video.
+    if range_header and upstream.status_code != 206:
+        await upstream.aclose()
+        await client.aclose()
+        raise HTTPException(502, detail="Cloud storage did not honor byte range")
 
     response_headers = {
         k: v for k, v in upstream.headers.items() if k.lower() in FORWARDED_HEADERS
