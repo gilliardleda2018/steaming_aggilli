@@ -88,5 +88,37 @@ class ListenerTests(unittest.TestCase):
             self.assertEqual(self.client.put("/admin/subscriptions", json={"listener_id": "any", "plan": "premium", "status": "active", "access_until": "2030-01-01T00:00:00Z"},
                 headers={"Authorization": "Bearer " + TOKEN}).status_code, 503)
 
+    def test_private_playback_rechecks_rights_on_each_range(self):
+        listener_id = self.register()
+        headers = {"Authorization": "Bearer " + self.login()}
+        url = "/listeners/playback/song1"
+        expiry = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+        self.db.set_subscription(listener_id, "premium", "active", expiry)
+        media_dir = Path(self.tmp.name) / "private-media"
+        media_dir.mkdir()
+        (media_dir / "song1.mp3").write_bytes(b"0123456789")
+        rights = RightsRegistry(Path(self.tmp.name) / "rights.json")
+
+        with patch.dict(os.environ, {"AGGILLI_COMMERCIAL_MEDIA_DIR": ""}):
+            self.assertEqual(self.client.get(url, headers=headers).status_code, 503)
+        with patch.dict(os.environ, {
+            "AGGILLI_COMMERCIAL_MEDIA_DIR": str(media_dir),
+            "AGGILLI_COMMERCIAL_PLAYBACK_TERRITORY": "BR",
+        }):
+            self.assertEqual(self.client.get(url).status_code, 401)
+            self.assertEqual(self.client.get(url, headers=headers).status_code, 403)
+            rights.put("song1", RIGHTS)
+            self.assertEqual(self.client.get(url, headers=headers).content, b"0123456789")
+            self.assertEqual(self.client.head(url, headers=headers).headers["Content-Length"], "10")
+            ranged = {**headers, "Range": "bytes=2-4"}
+            result = self.client.get(url, headers=ranged)
+            self.assertEqual(result.status_code, 206)
+            self.assertEqual(result.content, b"234")
+            self.assertEqual(result.headers["Content-Range"], "bytes 2-4/10")
+            self.assertEqual(result.headers["Cache-Control"], "private, no-store")
+            self.assertEqual(self.client.get(url, headers={**headers, "Range": "bytes=20-"}).status_code, 416)
+            rights.revoke("song1")
+            self.assertEqual(self.client.get(url, headers=ranged).status_code, 403)
+
 if __name__ == "__main__":
     unittest.main()

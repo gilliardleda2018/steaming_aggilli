@@ -1,13 +1,12 @@
-"""Commercial staging API for listeners and read-only licensed catalog decisions.
-
-NOT connected to public AzuraCast, billing or production playback.
-"""
+"""Commercial staging API for listeners, catalog decisions and private audio."""
 import os
+import re
 import secrets
 import sqlite3
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from commercial.listeners import ListenerStore
@@ -102,6 +101,35 @@ def check_access(track_id: str, territory: str = "BR", listener=Depends(current_
     rights = registry().read().get(track_id)
     sub = store().subscription(listener["id"])
     return {"track_id": track_id, "allowed": allowed_to_play(listener, sub, rights, territory)}
+
+
+@app.get("/listeners/playback/{track_id}")
+@app.head("/listeners/playback/{track_id}")
+def playback(track_id: str, listener=Depends(current_listener)):
+    """Authorize each media request against the private staging library."""
+    media_dir = os.environ.get("AGGILLI_COMMERCIAL_MEDIA_DIR")
+    territory = os.environ.get("AGGILLI_COMMERCIAL_PLAYBACK_TERRITORY", "")
+    if not media_dir or not re.fullmatch(r"[A-Z]{2}", territory):
+        raise HTTPException(503, "Staging playback not configured")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", track_id):
+        raise HTTPException(404, "Track unavailable")
+    try:
+        rights = registry().read().get(track_id)
+        sub = store().subscription(listener["id"])
+    except (OSError, ValueError, sqlite3.Error):
+        raise HTTPException(503, "Playback authorization unavailable")
+    if not allowed_to_play(listener, sub, rights, territory):
+        raise HTTPException(403, "Playback not authorized")
+
+    # The staging operator provisions this directory outside any web root.
+    # Only direct, regular MP3 assets are served.
+    path = Path(media_dir) / f"{track_id}.mp3"
+    if path.is_symlink() or not path.is_file():
+        raise HTTPException(404, "Track unavailable")
+    return FileResponse(path, media_type="audio/mpeg", headers={
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+    })
 
 
 @app.put("/admin/subscriptions", dependencies=[Depends(admin)])
