@@ -4,7 +4,6 @@ Deterministic, explainable ranking foundation for future AI DJ. Never returns
 tracks without valid commercial interactive-streaming rights. No external AI
 API, personal profiling or public playback integration is enabled here.
 """
-import math
 import re
 import unicodedata
 from collections import Counter
@@ -86,7 +85,7 @@ def recommend(tracks: list[dict], rights_by_id: Mapping, territory: str,
     remaining = scored[:]
     while remaining and len(output) < limit:
         best = min(range(len(remaining)), key=lambda i: (
-            artist_counts[remaining[i][1]], -remaining[i][0], remaining[i][2]
+            -(remaining[i][0] - artist_counts[remaining[i][1]] * 2), remaining[i][2]
         ))
         score, artist_key, track_id, title, artist, matched = remaining.pop(best)
         artist_counts[artist_key] += 1
