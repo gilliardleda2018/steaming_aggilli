@@ -122,7 +122,7 @@ body{background:#f3f5f4;color:#e9eef0;padding-bottom:0;font-family:system-ui,-ap
 header{display:none}
 main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-radius:20px;box-shadow:0 12px 40px #0002}
 .app-head{display:flex;align-items:center;gap:12px;padding:6px 0 16px}
-.app-logo{width:38px;height:38px;border-radius:10px;background:#263d32;color:var(--green);display:grid;place-items:center;font-size:21px}
+.app-logo{width:72px;height:72px;border-radius:14px;object-fit:contain;background:#04080f;flex-shrink:0}
 .app-head strong{font-size:17px;letter-spacing:.02em}.app-head small{display:block;color:var(--muted);font-size:10px;margin-top:3px}
 .player{position:static;background:#090e14;border:0;border-radius:14px;padding:14px;margin-bottom:12px}
 .now-label{font-size:10px;color:var(--green);margin-bottom:9px}.now-line{font-size:15px;min-height:25px}
@@ -187,7 +187,7 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
 </head>
 <body>
 <main>
- <div class="app-head"><div class="app-logo">♫</div><div><strong>AGGILLI MUSIC</strong><small>PLAYLIST EDITOR · <span id="totalTracks">36</span> FAIXAS</small></div></div>
+ <div class="app-head"><img class="app-logo" src="aggilli-music-logo.jpg" alt="Logomarca oficial Aggilli Music" width="72" height="72"><div><strong>AGGILLI MUSIC</strong><small>PLAYLIST EDITOR · <span id="totalTracks">36</span> FAIXAS</small></div></div>
  <section class="player" aria-label="Reprodutor de música">
   <div class="now-label">REPRODUZINDO AGORA</div>
   <div id="now" class="now-line" aria-live="polite">Selecione uma música</div>
@@ -1031,10 +1031,12 @@ fetch('catalogo.json',{cache:'no-store'})
    title.style.cssText='display:block;font-size:12px';
    const why=document.createElement('small');why.textContent=matches.length?'Combina com '+mood+': '+matches.join(', '):'Descoberta da biblioteca';
    why.style.color='#9cbab1';info.append(title,why);
-   const play=document.createElement('button');play.type='button';play.textContent='▶';play.setAttribute('aria-label','Reproduzir '+title.textContent);
-   play.style.cssText='padding:6px 11px;border-radius:7px';
-   play.addEventListener('click',()=>{aggilliDjQueueActive=true;playQueue=ranked.map(x=>x.t.track_id);if(window.aggilliRenderQueue)window.aggilliRenderQueue();playTrack(t);});
-   line.append(info,play);results.append(line);
+   line.setAttribute('role','button');line.tabIndex=0;
+   line.style.cursor='pointer';line.setAttribute('aria-label','Reproduzir '+title.textContent);
+   const select=()=>{aggilliDjQueueActive=true;playQueue=ranked.map(x=>x.t.track_id);if(window.aggilliRenderQueue)window.aggilliRenderQueue();playTrack(t);};
+   line.addEventListener('click',select);
+   line.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select();}});
+   line.append(info);results.append(line);
   });
  }
  generate.addEventListener('click',()=>create(detect(prompt.value)));
@@ -1060,17 +1062,17 @@ fetch('catalogo.json',{cache:'no-store'})
    const parts=trackArtistTitle(track);
    label.textContent=(index+1)+'. '+parts.artist+' — '+parts.title;
    if(track.track_id===currentTrackId){label.style.color='#4ade80';label.setAttribute('aria-current','true');}
-   const button=document.createElement('button');button.type='button';button.textContent='▶';
-   button.style.cssText='padding:6px 11px;border-radius:7px';
-   button.setAttribute('aria-label','Reproduzir '+parts.title);
-   button.addEventListener('click',()=>playTrack(track));
+   line.setAttribute('role','button');line.tabIndex=0;line.style.cursor='pointer';
+   line.setAttribute('aria-label','Reproduzir '+parts.title);
+   line.addEventListener('click',e=>{if(e.target.closest('button'))return;playTrack(track);});
+   line.addEventListener('keydown',e=>{if(e.target===line&&(e.key==='Enter'||e.key===' ')){e.preventDefault();playTrack(track);}});
    const up=document.createElement('button');up.type='button';up.textContent='↑';up.title='Mover para cima';up.setAttribute('aria-label','Mover '+parts.title+' para cima');up.style.cssText='padding:6px 9px;border-radius:7px';up.disabled=index===0;
    up.addEventListener('click',()=>{const a=playQueue.indexOf(track.track_id);if(a>0){[playQueue[a-1],playQueue[a]]=[playQueue[a],playQueue[a-1]];window.aggilliRenderQueue();}});
    const down=document.createElement('button');down.type='button';down.textContent='↓';down.title='Mover para baixo';down.setAttribute('aria-label','Mover '+parts.title+' para baixo');down.style.cssText='padding:6px 9px;border-radius:7px';down.disabled=index===available.length-1;
    down.addEventListener('click',()=>{const a=playQueue.indexOf(track.track_id);if(a>=0&&a<playQueue.length-1){[playQueue[a],playQueue[a+1]]=[playQueue[a+1],playQueue[a]];window.aggilliRenderQueue();}});
    const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.title='Remover da fila';remove.setAttribute('aria-label','Remover '+parts.title+' da fila');remove.style.cssText='padding:6px 9px;border-radius:7px';
    remove.addEventListener('click',()=>{playQueue=playQueue.filter(id=>id!==track.track_id);if(currentTrackId===track.track_id&&playbackMode==='track'){stopAudio();currentTrackId=null;}window.aggilliRenderQueue();});
-   line.append(label,button,up,down,remove);items.append(line);
+   line.append(label,up,down,remove);items.append(line);
   });
  };
  library.addEventListener('click',()=>{
