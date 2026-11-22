@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Aggilli Music Intelligence — DJ ANI</title>
+<style>
+:root{color-scheme:dark;font:16px system-ui,sans-serif;background:#04080f;color:#e7f4ff}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 80% 5%,#0b3c4e 0,transparent 35%),radial-gradient(circle at 10% 60%,#103626 0,transparent 45%),#04080f}
+main{max-width:1100px;margin:auto;padding:24px}.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.logo{width:66px;height:66px;border-radius:16px;object-fit:cover;border:1px solid #4ade80}
+h1{margin:0;font-size:clamp(1.5rem,3vw,2.5rem)}h2{font-size:1.15rem}.sub{color:#a4b9c5}
+.layout{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;margin-top:22px}
+.panel{background:#0d1824de;border:1px solid #28465b;border-radius:20px;padding:22px;box-shadow:0 10px 40px #0005}
+.hero{padding:30px 0}h1 strong{color:#4ade80}.prompt{width:100%;min-height:115px;background:#071522;color:white;border:1px solid #39708a;border-radius:14px;padding:15px;font:inherit;resize:vertical}
+button,input{font:inherit}button{cursor:pointer;background:#174f46;border:1px solid #4ade80;color:#eafff3;padding:11px 16px;border-radius:11px}button:disabled{opacity:.5}
+.chips{display:flex;gap:9px;flex-wrap:wrap;margin:15px 0}.chip{border-color:#35718a;background:#0b2636}
+.track{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #28465b}.track:last-child{border:0}.num{font-variant-numeric:tabular-nums;color:#4ade80;width:24px}.trackinfo{flex:1;min-width:0}.trackinfo strong{display:block;overflow-wrap:anywhere}.trackinfo small{color:#a4b9c5}
+.tag{display:inline-block;border:1px solid #3c6770;border-radius:30px;padding:4px 10px;color:#a8d8dd;font-size:.8rem}
+.settings{display:grid;gap:9px}.settings input{width:100%;background:#061522;border:1px solid #39576a;color:#fff;border-radius:10px;padding:10px}
+label{font-size:.88rem;color:#b6cdd7}#message{min-height:24px;color:#a6eac6}#session{min-height:120px}
+@media(max-width:750px){.layout{grid-template-columns:1fr}main{padding:14px}.panel{padding:16px}}
+</style>
+</head>
+<body><main>
+<header class="top">
+<div class="logo" role="img" aria-label="Aggilli Music">♫</div>
+<div><h1>AGGILLI <strong>MUSIC</strong></h1><div class="sub">INTELLIGENCE · DJ ANI</div></div>
+</header>
+<section class="hero"><span class="tag">Prévia comercial • Sem reprodução de áudio</span>
+<h1>Sua música. <strong>Seu momento.</strong> Sua inteligência.</h1>
+<p class="sub">Descreva o que você quer ouvir. O DJ ANI cria uma sessão usando apenas faixas autorizadas.</p></section>
+<div class="layout">
+<section class="panel">
+<h2>Converse com o DJ ANI</h2>
+<label for="prompt">O que combina com seu momento?</label>
+<textarea class="prompt" id="prompt" maxlength="400" placeholder="Quero músicas tranquilas para trabalhar e manter o foco..."></textarea>
+<div class="chips">
+<button type="button" class="chip" data-prompt="Quero músicas tranquilas para trabalhar com foco">Foco</button>
+<button type="button" class="chip" data-prompt="Quero relaxar com música calma">Relaxar</button>
+<button type="button" class="chip" data-prompt="Quero músicas com energia para treinar">Energia</button>
+<button type="button" class="chip" data-prompt="Surpreenda-me com novas músicas">Descoberta</button>
+</div>
+<button id="generate" type="button">Criar minha sessão</button>
+<p id="message" role="status" aria-live="polite"></p>
+<h2 id="sessionTitle">Sua sessão aparecerá aqui</h2>
+<div id="session" class="sub">Configure uma API de testes e faça um pedido ao DJ ANI. Nenhum áudio será reproduzido nesta prévia.</div>
+</section>
+<aside class="panel">
+<h2>Conexão de testes</h2>
+<p class="sub">Conecte somente a API comercial de homologação. O token fica na memória desta página.</p>
+<div class="settings">
+<label for="api">URL base HTTPS da API comercial</label>
+<input id="api" type="url" autocomplete="off" placeholder="https://staging.exemplo.com">
+<label for="token">Token do ouvinte de testes</label>
+<input id="token" type="password" autocomplete="off" placeholder="Bearer token de homologação">
+<label for="territory">Território</label>
+<input id="territory" maxlength="2" value="BR">
+<button id="clear" type="button">Limpar conexão</button>
+</div>
+<h2>Sobre esta experiência</h2>
+<p class="sub">O motor de IA sugere títulos e explica as escolhas. As permissões de streaming são verificadas pelo servidor, não pela IA.</p>
+</aside>
+</div>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+document.querySelectorAll('[data-prompt]').forEach(button=>button.addEventListener('click',()=>{$('prompt').value=button.dataset.prompt;$('prompt').focus();}));
+$('clear').addEventListener('click',()=>{$('api').value='';$('token').value='';$('message').textContent='Conexão limpa.';});
+$('generate').addEventListener('click',async()=>{
+ const button=$('generate');button.disabled=true;$('message').textContent='Preparando sua sessão...';
+ try{
+  const prompt=$('prompt').value.trim();
+  if(!prompt || prompt.length>400)throw Error('Descreva seu momento em até 400 caracteres.');
+  const url=new URL($('api').value);
+  if(url.protocol!=='https:' || url.username || url.password || url.search || url.hash)throw Error('Informe uma URL HTTPS de homologação válida.');
+  const token=$('token').value;
+  if(token.length<32)throw Error('Informe um token válido de testes.');
+  const territory=$('territory').value.trim().toUpperCase();
+  if(!/^[A-Z]{2}$/.test(territory))throw Error('Informe o território com duas letras.');
+  const response=await fetch(url.href.replace(/\/$/,'')+'/listeners/dj/session',{
+   method:'POST',redirect:'error',cache:'no-store',
+   headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+   body:JSON.stringify({prompt,territory,limit:10})
+  });
+  if(!response.ok)throw Error('A API respondeu HTTP '+response.status);
+  const data=await response.json();
+  if(!data || !Array.isArray(data.tracks))throw Error('Resposta de sessão inválida.');
+  $('sessionTitle').textContent=String(data.title||'Sua sessão').slice(0,100);
+  const box=$('session');box.replaceChildren();
+  data.tracks.slice(0,50).forEach((track,index)=>{
+   const item=document.createElement('div');item.className='track';
+   const number=document.createElement('span');number.className='num';number.textContent=String(index+1).padStart(2,'0');
+   const info=document.createElement('div');info.className='trackinfo';
+   const title=document.createElement('strong');title.textContent=String(track.title||'Sem título');
+   const reason=document.createElement('small');reason.textContent=String(track.reason||'')+' · '+String(track.artist||'');
+   info.append(title,reason);item.append(number,info);box.append(item);
+  });
+  if(!data.tracks.length)box.textContent='Nenhuma música licenciada disponível para esta sessão.';
+  $('message').textContent='Sessão criada usando '+(data.engine==='ani'?'ANI':'motor local')+'.';
+ }catch(error){$('message').textContent=error.message;}
+ finally{button.disabled=false;}
+});
+</script>
+</body></html>
