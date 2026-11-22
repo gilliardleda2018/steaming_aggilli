@@ -269,9 +269,11 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
 const audio=document.getElementById('audio');
 const cloudVideo=document.getElementById('cloudVideo');
 const cloudPreview=new URLSearchParams(location.search).has('cloudPreview');
+const localPreview=new URLSearchParams(location.search).has('localPreview');
 function activeMedia(){return !cloudVideo.hidden?cloudVideo:audio}
 function hideCloudVideo(){cloudVideo.pause();cloudVideo.removeAttribute('src');cloudVideo.load();cloudVideo.hidden=true;cloudVideo.style.display='none'}
 function mediaUrl(t){
+ if(t.source==='local')return t.stream_url;
  if(t.source==='nextcloud')return '/cloud/'+encodeURIComponent(t.filename);
  return cloudPreview?'https://server.taila400aa.ts.net/music/music-api'+t.download_url:'music-api'+t.download_url;
 }
@@ -488,7 +490,7 @@ async function playTrack(track){
    shuffleHistoryIndex=shuffleHistory.length-1;
   }
  }
- const isCloudVideo=track.source==='nextcloud'&&track.format==='mp4';
+ const isCloudVideo=(track.source==='nextcloud'||track.source==='local')&&track.format==='mp4';
  audio.pause();
  hideCloudVideo();
  let src=mediaUrl(track);
@@ -563,7 +565,7 @@ function render(){
   const num=document.createElement('span');num.className='winamp-number';num.textContent=row.dataset.index;
   const info=document.createElement('div');info.className='winamp-info';
   const artist=document.createElement('strong');artist.textContent=parts.artist;
-  const title=document.createElement('small');title.textContent=parts.title+(t.source==='nextcloud'?(t.format==='mp4'?' · 🎬 Nuvem':' · ☁ Nuvem'):'');
+  const title=document.createElement('small');title.textContent=parts.title+(t.source==='local'?(t.format==='mp4'?' · 🎬 Local':' · ♪ Local'):(t.source==='nextcloud'?(t.format==='mp4'?' · 🎬 Nuvem':' · ☁ Nuvem'):''));
   const select=document.createElement('select');select.className='edit-genre';select.title='Alterar gênero';select.setAttribute('aria-label','Gênero de '+parts.title);
   genreNames.filter(x=>x!=='Todos').forEach(g=>{const option=document.createElement('option');option.value=g;option.textContent=g;select.append(option)});
   select.value=genres[t.track_id]||'Outros';
@@ -612,6 +614,15 @@ fetch('catalogo.json',{cache:'no-store'})
  .then(r=>{if(!r.ok)throw Error(r.status);return r.json()})
  .then(async data=>{
   tracks=data;
+  if(localPreview){
+   try{
+    const response=await fetch('catalogo-local.json',{cache:'no-store'});
+    if(!response.ok)throw Error('Catálogo local HTTP '+response.status);
+    const local=await response.json();
+    if(!Array.isArray(local.tracks))throw Error('Formato de catálogo local inválido');
+    tracks=[...local.tracks,...data];
+   }catch(err){console.warn('Biblioteca local indisponível:',err)}
+  }
   if(cloudPreview){
    try{
     const response=await fetch('/cloud-catalog',{cache:'no-store'});
