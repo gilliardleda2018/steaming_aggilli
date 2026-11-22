@@ -5,6 +5,7 @@ validating authorization, proxy rules and browser playback. Credentials stay
 server-side; the browser never connects to WebDAV directly.
 """
 import os
+from contextlib import asynccontextmanager
 from pathlib import PurePosixPath
 from urllib.parse import quote
 
@@ -14,7 +15,24 @@ from fastapi.responses import StreamingResponse
 
 from main import require_upload_auth
 
-router = APIRouter()
+_shared_client: httpx.AsyncClient | None = None
+
+@asynccontextmanager
+async def cloud_lifespan(_app):
+    global _shared_client
+    client = httpx.AsyncClient(
+        timeout=httpx.Timeout(connect=10, read=60, write=10, pool=10),
+        limits=httpx.Limits(max_connections=12, max_keepalive_connections=6, keepalive_expiry=30),
+        follow_redirects=False,
+    )
+    _shared_client = client
+    try:
+        yield
+    finally:
+        _shared_client = None
+        await client.aclose()
+
+router = APIRouter(lifespan=cloud_lifespan)
 ALLOWED_EXTENSIONS = {".mp3", ".mp4"}
 BASE_URL = (
     "https://nuvem.aggillintelligence.com.br/"
@@ -52,22 +70,26 @@ async def proxy_media(filename: str, method: str, range_header: str | None):
         headers["Range"] = range_header
 
     url = remote_url(filename)
-    client = httpx.AsyncClient(
-        auth=httpx.BasicAuth(username, password),
+    own_client = _shared_client is None
+    client = _shared_client or httpx.AsyncClient(
         timeout=httpx.Timeout(connect=10, read=60, write=10, pool=10),
         follow_redirects=False,
     )
     try:
-        request = client.build_request(method, url, headers=headers)
+        request = client.build_request(method, url, headers=headers, auth=httpx.BasicAuth(username, password))
         upstream = await client.send(request, stream=True)
     except httpx.HTTPError:
-        await client.aclose()
+        if own_client:
+            if own_client:
+                await client.aclose()
         raise HTTPException(502, detail="Cloud storage unavailable")
 
     if upstream.status_code not in {200, 206}:
         status = upstream.status_code
         await upstream.aclose()
-        await client.aclose()
+        if own_client:
+            if own_client:
+                await client.aclose()
         if status == 404:
             raise HTTPException(404, detail="Media not found")
         if status in {401, 403}:
@@ -79,7 +101,9 @@ async def proxy_media(filename: str, method: str, range_header: str | None):
     # A server ignoring Range could stream an entire multi-GB video.
     if range_header and upstream.status_code != 206:
         await upstream.aclose()
-        await client.aclose()
+        if own_client:
+            if own_client:
+                await client.aclose()
         raise HTTPException(502, detail="Cloud storage did not honor byte range")
 
     response_headers = {
@@ -90,7 +114,9 @@ async def proxy_media(filename: str, method: str, range_header: str | None):
     response_headers["Content-Disposition"] = "inline"
     if method == "HEAD":
         await upstream.aclose()
-        await client.aclose()
+        if own_client:
+            if own_client:
+                await client.aclose()
         from fastapi import Response
         return Response(status_code=upstream.status_code, headers=response_headers)
 
@@ -100,7 +126,9 @@ async def proxy_media(filename: str, method: str, range_header: str | None):
                 yield chunk
         finally:
             await upstream.aclose()
-            await client.aclose()
+            if own_client:
+            if own_client:
+                await client.aclose()
 
     return StreamingResponse(
         stream(),
