@@ -6,8 +6,10 @@ Uses the same AzuraCast upload API as the existing Aggilli Music backend.
 """
 import json
 import os
+import unicodedata
 import subprocess
 import tempfile
+import re
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
 from xml.etree import ElementTree as ET
@@ -62,6 +64,11 @@ def download(client, name, size, target):
             raise RuntimeError(f"Partial download: {count}/{size}")
 
 
+def normalized_filename(name):
+    ascii_name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode('ascii')
+    return re.sub(r'[^a-z0-9]+', '_', Path(ascii_name).stem.lower()).strip('_')
+
+
 def main():
     user = os.environ.get("AGGILLI_WEBDAV_USER")
     password = os.environ.get("AGGILLI_WEBDAV_APP_PASSWORD")
@@ -78,12 +85,12 @@ def main():
     with httpx.Client(auth=(user, password), timeout=httpx.Timeout(120, connect=15), follow_redirects=False) as cloud, httpx.Client(timeout=240) as azura:
         files = azura.get(AZURA + "/files", headers=headers)
         files.raise_for_status()
-        existing = {Path(x.get("path", "")).name.casefold() for x in files.json()}
+        existing = {normalized_filename(Path(x.get("path", "")).name) for x in files.json()}
         for name, size, etag in list_remote(cloud):
             if imported >= limit:
                 break
             output = name if name.lower().endswith(".mp3") else Path(name).stem + ".mp3"
-            if output.casefold() in existing:
+            if normalized_filename(output) in existing or (name in state and state[name].get("etag") == etag):
                 print(f"SKIP exists: {output}", flush=True)
                 continue
             print(f"SYNC: {name} -> {output}", flush=True)
@@ -100,7 +107,7 @@ def main():
                 with source.open("rb") as stream:
                     response = azura.post(AZURA + "/files/upload", headers=headers, files={"file": (output, stream, "audio/mpeg")})
                 response.raise_for_status()
-                existing.add(output.casefold())
+                existing.add(normalized_filename(output))
                 imported += 1
                 state[name] = {"etag": etag, "azuracast_filename": output}
                 temp = STATE_FILE.with_suffix(".tmp")
