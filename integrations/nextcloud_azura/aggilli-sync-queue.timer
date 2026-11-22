@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for Aggilli Music manual sync requests
+
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=15s
+AccuracySec=5s
+Unit=aggilli-sync-queue.service
+
+[Install]
+WantedBy=timers.target
