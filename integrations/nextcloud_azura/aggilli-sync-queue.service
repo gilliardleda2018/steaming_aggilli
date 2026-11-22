@@ -1,0 +1,9 @@
+[Unit]
+Description=Aggilli Music - consume authorized sync requests
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/python3 /home/gilliard/projetos/steaming_aggilli/integrations/nextcloud_azura/queue_worker.py
+TimeoutStartSec=6h
