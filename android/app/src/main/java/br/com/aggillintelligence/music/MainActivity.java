@@ -6,6 +6,8 @@ import android.os.Bundle;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -18,6 +20,7 @@ import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Locale;
 import org.json.JSONException;
 import org.json.JSONObject;
 public class MainActivity extends Activity {
@@ -28,13 +31,18 @@ public class MainActivity extends Activity {
  // Ponte de voz: o WebView do Android não reconhece fala pela Web Speech API.
  private SpeechRecognizer recognizer;
  private JavaScriptReplyProxy voiceReply;
+ // Resposta falada da ANI ("Tocando ..."), como uma assistente de voz.
+ private TextToSpeech speech;
+ private boolean speechReady;
+ private String pendingSpeech;
  @Override public void onCreate(Bundle state) {
   super.onCreate(state);
   web=new WebView(this); setContentView(web);
   WebSettings settings=web.getSettings();
   settings.setJavaScriptEnabled(true);
   settings.setDomStorageEnabled(true);
-  settings.setMediaPlaybackRequiresUserGesture(true);
+  // Pedidos por voz começam a tocar sem um toque extra na tela.
+  settings.setMediaPlaybackRequiresUserGesture(false);
   settings.setAllowFileAccess(false);
   settings.setAllowContentAccess(false);
   web.setWebChromeClient(new WebChromeClient());
@@ -52,8 +60,10 @@ public class MainActivity extends Activity {
     (view,message,sourceOrigin,isMainFrame,replyProxy)->{
      if(!isMainFrame||message.getData()==null)return;
      voiceReply=replyProxy;
-     if("start".equals(message.getData()))startVoice();
-     else if("cancel".equals(message.getData()))cancelVoice();
+     String data=message.getData();
+     if("start".equals(data))startVoice();
+     else if("cancel".equals(data))cancelVoice();
+     else if(data.startsWith("say:"))say(data.substring(4));
     });
   }
   if(state==null) {
@@ -100,6 +110,35 @@ public class MainActivity extends Activity {
   intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
   recognizer.startListening(intent);
  }
+ private void say(String text){
+  text=text.replaceAll("\\s+"," ").trim();
+  if(text.length()>240)text=text.substring(0,240);
+  if(text.isEmpty()){sendSpoken();return;}
+  if(speech==null){
+   pendingSpeech=text;
+   speech=new TextToSpeech(this,status->{
+    speechReady=status==TextToSpeech.SUCCESS
+     &&speech.setLanguage(new Locale("pt","BR"))>=TextToSpeech.LANG_AVAILABLE;
+    if(!speechReady){sendSpoken();return;}
+    speech.setOnUtteranceProgressListener(new UtteranceProgressListener(){
+     @Override public void onStart(String id){}
+     @Override public void onDone(String id){sendSpoken();}
+     @Override public void onError(String id){sendSpoken();}
+    });
+    String next=pendingSpeech;pendingSpeech=null;
+    if(next!=null)speech.speak(next,TextToSpeech.QUEUE_FLUSH,null,"ani");
+   });
+   return;
+  }
+  if(!speechReady){sendSpoken();return;}
+  speech.speak(text,TextToSpeech.QUEUE_FLUSH,null,"ani");
+ }
+ private void sendSpoken(){
+  runOnUiThread(()->{
+   if(voiceReply==null)return;
+   try{voiceReply.postMessage(new JSONObject().put("type","spoken").toString());}catch(JSONException ignored){}
+  });
+ }
  private void cancelVoice(){
   if(recognizer!=null)recognizer.cancel();
   releaseRecognizer();
@@ -126,5 +165,9 @@ public class MainActivity extends Activity {
  @Override protected void onPause(){cancelVoice();super.onPause();}
  @Override public void onBackPressed(){if(web.canGoBack()) web.goBack();else super.onBackPressed();}
  @Override protected void onSaveInstanceState(Bundle state){web.saveState(state);super.onSaveInstanceState(state);}
- @Override protected void onDestroy(){releaseRecognizer();web.destroy();super.onDestroy();}
+ @Override protected void onDestroy(){
+  releaseRecognizer();
+  if(speech!=null){speech.stop();speech.shutdown();speech=null;}
+  web.destroy();super.onDestroy();
+ }
 }

@@ -30,6 +30,14 @@ class IntentHintTests(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertFalse(self.parse(avoid_repeats=value)["avoid_repeats"])
 
+    def test_query_is_plain_bounded_text(self):
+        self.assertEqual(self.parse(query="  pink floyd ")["query"], "pink floyd")
+        self.assertEqual(self.parse(query="a\nb\x00c")["query"], "a b c")
+        self.assertEqual(len(self.parse(query="x" * 500)["query"]), 80)
+        for value in (None, 3, ["pink floyd"], {"q": 1}):
+            with self.subTest(value=value):
+                self.assertEqual(self.parse(query=value)["query"], "")
+
     def test_server_genres_match_the_player_filter(self):
         names = re.search(r"const genreNames=\[([^\]]+)\]", PLAYER).group(1)
         player = [n.strip().strip("'") for n in names.split(",")]

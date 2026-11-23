@@ -403,7 +403,7 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
 </head>
 <body>
 <main>
- <div class="app-head"><img class="app-logo" src="aggilli-music-logo.jpg?v=b25dabf" alt="Logomarca oficial Aggilli Music" width="72" height="72"><div><strong>AGGILLI MUSIC</strong><small><span id="playerRelease">v1.1.1</span> · <span id="totalTracks">36</span> FAIXAS</small></div></div>
+ <div class="app-head"><img class="app-logo" src="aggilli-music-logo.jpg?v=b25dabf" alt="Logomarca oficial Aggilli Music" width="72" height="72"><div><strong>AGGILLI MUSIC</strong><small><span id="playerRelease">v1.1.2</span> · <span id="totalTracks">36</span> FAIXAS</small></div></div>
  <section class="player" aria-label="Reprodutor de música">
   <div class="receiver-display">
   <div class="now-label">REPRODUZINDO AGORA</div>
@@ -1588,6 +1588,7 @@ fetch('catalogo.json',{cache:'no-store'})
   const prompt=get('aggilliDjPrompt'), interpret=get('aggilliDjInterpret');
   if(!prompt||!interpret){report('Painel da ANI indisponível.');return;}
   prompt.value=text.trim().slice(0,250);
+  prompt.dataset.voice='1';
   report('Pedido enviado à ANI.');
   interpret.click();
  }
@@ -1644,6 +1645,9 @@ fetch('catalogo.json',{cache:'no-store'})
    const play=get('tunerPlay');
    if(play.disabled){finish('Essa memória está vazia.');return;}
    play.click();finish('Sintonizando '+button.title+'.');
+  }else if(/^(?:toca|toque|tocar|coloca|coloque|bota|bote|poe|ponha|quero ouvir|ouvir|ouca|play)\s+\S/.test(command)){
+   // "Toca Pink Floyd", "quero ouvir algo calmo": a ANI escolhe no catálogo.
+   askAni(raw,finish);
   }else finish('Comando não reconhecido.');
  }
  let recognition, listener=null;
@@ -1655,10 +1659,33 @@ fetch('catalogo.json',{cache:'no-store'})
   unavailable:'Reconhecimento de voz indisponível neste aparelho. Digite o comando.',
   nomatch:'Nenhum comando captado.'
  };
+ // Resposta falada da ANI: no APK pelo sintetizador do Android, no navegador pela Web Speech API.
+ let afterSpeech=null, speechTimer=0;
+ function speechDone(){
+  clearTimeout(speechTimer);
+  const next=afterSpeech;afterSpeech=null;
+  if(next)next();
+ }
+ window.aggilliSpeak=(text,then)=>{
+  speechDone();
+  const phrase=String(text||'').replace(/\s+/g,' ').trim().slice(0,240);
+  afterSpeech=typeof then==='function'?then:null;
+  if(!phrase){speechDone();return;}
+  // Se a fala travar, a música começa mesmo assim.
+  speechTimer=setTimeout(speechDone,9000);
+  if(nativeVoice){nativeVoice.postMessage('say:'+phrase);return;}
+  if(!window.speechSynthesis||typeof SpeechSynthesisUtterance!=='function'){speechDone();return;}
+  const utterance=new SpeechSynthesisUtterance(phrase);
+  utterance.lang='pt-BR';
+  utterance.onend=utterance.onerror=speechDone;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utterance);
+ };
  if(nativeVoice)nativeVoice.onmessage=event=>{
-  if(!nativeListening)return;
   let data;
   try{data=JSON.parse(event.data)}catch(_){return}
+  if(data?.type==='spoken'){speechDone();return;}
+  if(!nativeListening)return;
   nativeListening=false;
   const target=listener||{button:mic,report:message=>{status.value=message;},onText:text=>{input.value=text.slice(0,100);execute(input.value);}};
   target.button.setAttribute('aria-pressed','false');
@@ -1938,6 +1965,35 @@ fetch('catalogo.json',{cache:'no-store'})
   if(/romant|amor/.test(x))return 'romantico';
   return 'descoberta';
  }
+ // "Toca Pink Floyd": acha no catálogo as faixas com todas as palavras do nome pedido.
+ const stopWords=new Set(['a','o','as','os','de','da','do','das','dos','e','the','of','um','uma','musica','musicas',
+  'cancao','som','banda','album','faixa','toca','toque','tocar','coloca','coloque','ouvir','quero','pra','para','por','favor']);
+ function playRequest(text){
+  const match=norm(text).match(/^(?:(?:ani|dj)\s+)?(?:toca|toque|tocar|coloca|coloque|bota|bote|poe|ponha|quero ouvir|ouvir|ouca|play)\s+(.+)$/);
+  return match?match[1]:'';
+ }
+ function catalogMatches(query){
+  const words=[...new Set(norm(query).replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>1&&!stopWords.has(w)))];
+  if(!words.length)return {words,items:[]};
+  const seen=new Set();
+  const scored=tracks.filter(t=>t&&t.track_id&&t.download_url&&t.media).map(t=>{
+   const m=t.media;
+   const meta=' '+norm([m.title,m.text,m.artist,m.album].join(' ')).replace(/[^a-z0-9]+/g,' ')+' ';
+   return {t,hits:words.filter(w=>meta.includes(' '+w+' ')).length};
+  });
+  const need=words.length>2?words.length-1:words.length;
+  const items=scored.filter(x=>x.hits>=need).sort((a,b)=>b.hits-a.hits).filter(({t})=>{
+   // Mesma música em .mp3 e .mp4 aparece uma vez só.
+   const key=norm(t.media.title||t.media.text).replace(/[^a-z0-9]+/g,'');
+   if(seen.has(key))return false;
+   seen.add(key);return true;
+  });
+  return {words,items};
+ }
+ // Nome falável: sem numeração, parênteses, colchetes e aspas do arquivo.
+ const trackName=t=>String(t.media.title||t.media.text||'Faixa').normalize('NFKC')
+  .replace(/\([^)]*\)|\[[^\]]*\]/g,' ').replace(/["“”'´`]/g,'').replace(/^\s*\d{2,3}\s+/,'')
+  .replace(/\s+/g,' ').trim()||'esta música';
  function create(mood, title=labels[mood], note='', hints={}){
   if(typeof tracks==='undefined'||!Array.isArray(tracks)||!tracks.length){status.textContent='Aguarde a biblioteca carregar.';return;}
   results.replaceChildren();
@@ -1955,6 +2011,13 @@ fetch('catalogo.json',{cache:'no-store'})
    .find(name=>(' '+request.replace(/[^a-z0-9]+/g,' ')+' ').includes(' '+norm(name)+' '))
    ||genreNames.find(name=>name!=='Todos'&&name!=='Outros'&&name===hints.genre);
   const skipRecent=/\b(?:sem repet\w*|nao repet\w*|evit\w+ repet\w*)\b/.test(request)||hints.avoidRepeats===true;
+  // O nome pedido à ANI vale sempre; o extraído localmente ("toca X") só quando acha algo.
+  const named=typeof hints.query==='string'&&!genreNames.some(g=>norm(g)===norm(hints.query))?hints.query.trim():'';
+  const local=named?'':playRequest(prompt.value);
+  const localFound=local?catalogMatches(local):null;
+  const query=named||(localFound?.items.length?local:'');
+  const found=named?catalogMatches(named):localFound?.items.length?localFound:{words:[],items:[]};
+  const foundIds=new Map(found.items.map((x,i)=>[x.t.track_id,found.items.length-i]));
   const skipToday=skipRecent&&/\bhoje\b/.test(request);
   const words=moods[mood]||[];
   const recent=new Set(recentIds.slice(0,12));
@@ -1964,18 +2027,18 @@ fetch('catalogo.json',{cache:'no-store'})
   const likedGenres=new Set(personalized
    ? tracks.filter(track=>track?.media&&favorites.has(track.track_id)).map(genreOf).filter(g=>g&&g!=='outros')
    : []);
-  const candidates=tracks.filter(t=>t&&t.track_id&&t.download_url&&t.media&&!history.has(t.track_id)
-   &&(!wantedGenre||genreOf(t)===norm(wantedGenre))).map(t=>{
+  const candidates=tracks.filter(t=>t&&t.track_id&&t.download_url&&t.media&&
+   (foundIds.size?foundIds.has(t.track_id):!history.has(t.track_id)&&(!wantedGenre||genreOf(t)===norm(wantedGenre)))).map(t=>{
    const m=t.media||{};
    const genre=genreOf(t);
    const meta=norm([m.title,m.text,m.artist,m.genre,genre].join(' '));
    const matches=words.filter(w=>meta.includes(w));
    const favorite=personalized&&favorites.has(t.track_id);
    const similar=likedGenres.has(genre);
-   const reason=matches.length?'Combina com '+labels[mood]+': '+matches.join(', '):
+   const reason=foundIds.size?'Você pediu: '+query:matches.length?'Combina com '+labels[mood]+': '+matches.join(', '):
     favorite?'Uma das suas favoritas':similar?'Gênero presente nas suas favoritas':
     wantedGenre?'Gênero pedido: '+wantedGenre:'Descoberta da biblioteca';
-   return {t,score:matches.length*3+(favorite?4:similar?3:0)-(recent.has(t.track_id)?2:0),reason};
+   return {t,score:(foundIds.get(t.track_id)||0)*100+matches.length*3+(favorite?4:similar?3:0)-(recent.has(t.track_id)?2:0),reason};
   }).sort((a,b)=>b.score-a.score||String(a.t.track_id).localeCompare(String(b.t.track_id)));
   const ranked=[];
   const included=new Set();
@@ -1992,23 +2055,26 @@ fetch('catalogo.json',{cache:'no-store'})
   if(!ranked.length){
    status.textContent='Nenhuma faixa atende a este pedido.'+
     (minutes!==null?' Sessões por tempo usam faixas com duração conhecida.':'');
-   return;
+   return {reply:'Não encontrei músicas para esse pedido.'};
   }
+  const missing=query&&found.words.length&&!foundIds.size?' Não encontrei “'+query+'” no catálogo.':'';
   const details=[];
-  if(wantedGenre)details.push(wantedGenre);
+  if(foundIds.size)details.push('pedido: '+query);
+  else if(wantedGenre)details.push(wantedGenre);
   if(minutes!==null)details.push(formatTime(seconds)+' de '+minutes+' min');
   if(skipRecent)details.push(skipToday?'sem faixas registradas hoje':'sem faixas do histórico recente');
-  status.textContent=ranked.length+' músicas · '+title+
+  status.textContent=ranked.length+(ranked.length===1?' música · ':' músicas · ')+title+
    (details.length?' · '+details.join(' · '):'')+
-   (personalized&&!favorites.size?' · marque faixas como favoritas para personalizar a seleção.':'.')+note;
+   (personalized&&!favorites.size?' · marque faixas como favoritas para personalizar a seleção.':'.')+missing+note;
   const controls=document.createElement('div');controls.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin:10px 0';
   const start=document.createElement('button');start.type='button';start.textContent='Ouvir seleção';start.style.borderRadius='8px';
-  start.addEventListener('click',()=>{
+  const play=()=>{
    aggilliDjQueueActive=true;
    playQueue=ranked.map(x=>x.t.track_id);
    if(window.aggilliRenderQueue)window.aggilliRenderQueue();
    if(typeof playTrack==='function')playTrack(ranked[0].t);
-  });
+  };
+  start.addEventListener('click',play);
   const saveSelection=document.createElement('button');
   saveSelection.type='button';saveSelection.textContent='Salvar como playlist';
   saveSelection.addEventListener('click',()=>{
@@ -2043,10 +2109,23 @@ fetch('catalogo.json',{cache:'no-store'})
    line.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select();}});
    line.append(info);results.append(line);
   });
+  const first=trackName(ranked[0].t), more=ranked.length-1;
+  const reply=(missing?'Não encontrei '+query+'. ':'')+'Tocando '+first+
+   (more?(foundIds.size?' e mais '+more+(more>1?' músicas':' música'):', da seleção '+String(title).replace(/^ANI · /,'')):'')+'.';
+  return {play,reply};
  }
  generate.addEventListener('click',()=>{selectionRevision++;create(detect(prompt.value));});
  document.querySelectorAll('#aggilliDjChips [data-dj]').forEach(b=>b.addEventListener('click',()=>{selectionRevision++;prompt.value=b.textContent;create(b.dataset.dj);}));
+ // Como uma assistente: a ANI monta, começa a tocar e, se o pedido foi falado, responde em voz.
+ function answer(result,spoken){
+  if(!result)return;
+  if(!result.play){if(spoken&&window.aggilliSpeak)window.aggilliSpeak(result.reply);return;}
+  if(spoken&&window.aggilliSpeak)window.aggilliSpeak(result.reply,result.play);
+  else result.play();
+ }
  interpret.addEventListener('click',async()=>{
+  const spoken=prompt.dataset.voice==='1';
+  delete prompt.dataset.voice;
   const query=prompt.value.trim();
   if(!query){status.textContent='Escreva um pedido musical.';return;}
   const credentials=document.getElementById('aggilliDjToken');
@@ -2057,7 +2136,7 @@ fetch('catalogo.json',{cache:'no-store'})
   const listenerSession=!!base&&base.protocol==='https:'&&base.origin===location.origin&&
     !base.username&&!base.password&&!base.search&&!base.hash&&credentials.value.length>=32;
   if(!listenerSession&&location.protocol!=='https:'){
-   create(detect(query),undefined,' Seleção local: a ANI online só responde pelo endereço HTTPS do player.');
+   answer(create(detect(query),undefined,' Seleção local: a ANI online só responde pelo endereço HTTPS do player.'),spoken);
    return;
   }
   const revision=++selectionRevision;
@@ -2080,12 +2159,13 @@ fetch('catalogo.json',{cache:'no-store'})
    const intent=await response.json();
    if(!Object.hasOwn(moods,intent.mood)||typeof intent.title!=='string')throw Error('Resposta inválida');
    if(stillCurrent()){
-    if(intent.engine==='ani')create(intent.mood,'ANI · '+intent.title.slice(0,100),'',
-     {genre:intent.genre,minutes:intent.minutes,avoidRepeats:intent.avoid_repeats});
-    else create(intent.mood,undefined,' Seleção local: modelo indisponível.');
+    if(intent.engine==='ani')answer(create(intent.mood,'ANI · '+intent.title.slice(0,100),'',
+     {genre:intent.genre,minutes:intent.minutes,avoidRepeats:intent.avoid_repeats,
+      query:typeof intent.query==='string'?intent.query.slice(0,80):''}),spoken);
+    else answer(create(intent.mood,undefined,' Seleção local: modelo indisponível.'),spoken);
    }
   }catch(_){
-   if(stillCurrent())create(detect(query),undefined,' Seleção local: modelo indisponível.');
+   if(stillCurrent())answer(create(detect(query),undefined,' Seleção local: modelo indisponível.'),spoken);
   }finally{interpret.disabled=false;}
  });
 })();
