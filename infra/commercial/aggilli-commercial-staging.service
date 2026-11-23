@@ -1,0 +1,32 @@
+[Unit]
+Description=Aggilli Music commercial API (homologação)
+Requires=aggilli-commercial-staging.socket
+After=network-online.target aggilli-commercial-staging.socket
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=aggilli-commercial
+Group=aggilli-commercial
+EnvironmentFile=/etc/aggilli-music/commercial-staging.env
+Environment=PYTHONPATH=/opt/aggilli-commercial/current
+Environment=AGGILLI_COMMERCIAL_DATA_DIR=/var/lib/aggilli-music-commercial
+WorkingDirectory=/opt/aggilli-commercial/current
+ExecStart=/opt/aggilli-commercial/venv/bin/python -m uvicorn commercial.listener_api:app --fd 3
+Sockets=aggilli-commercial-staging.socket
+StateDirectory=aggilli-music-commercial
+StateDirectoryMode=0700
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

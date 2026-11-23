@@ -1,0 +1,5 @@
+# Mesmas versões da API de upload em produção.
+fastapi==0.165.0
+uvicorn==0.54.0
+httpx==0.28.1
+pydantic==2.14.4

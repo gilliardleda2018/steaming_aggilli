@@ -1,0 +1,13 @@
+[Unit]
+Description=Aggilli Music commercial API socket (homologação)
+
+[Socket]
+ListenStream=/run/aggilli-commercial/api.sock
+SocketUser=aggilli-commercial
+SocketGroup=www-data
+SocketMode=0660
+DirectoryMode=0755
+Service=aggilli-commercial-staging.service
+
+[Install]
+WantedBy=sockets.target
