@@ -395,6 +395,7 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
   <button type="button" data-dj="relaxar" style="padding:7px 11px;border-radius:8px">Relaxar</button>
   <button type="button" data-dj="energia" style="padding:7px 11px;border-radius:8px">Energia</button>
   <button type="button" data-dj="descoberta" style="padding:7px 11px;border-radius:8px">Descoberta</button>
+  <button type="button" data-dj="personalizada" style="padding:7px 11px;border-radius:8px">Para mim</button>
  </div>
  <p id="aggilliDjStatus" role="status" aria-live="polite" style="font-size:12px;color:#b4c8c2"></p>
  <div id="aggilliDjResults" style="max-height:280px;overflow:auto"></div>
@@ -1380,8 +1381,10 @@ fetch('catalogo.json',{cache:'no-store'})
   foco:['instrumental','ambient','piano','classical','lofi','focus','study'],
   relaxar:['relax','calm','ambient','meditation','new age','chill','soft'],
   energia:['rock','dance','pop','electronic','energetic','upbeat','remix'],
-  descoberta:[]
+  descoberta:[],
+  personalizada:[]
  };
+ const labels={foco:'Foco',relaxar:'Relaxar',energia:'Energia',descoberta:'Descoberta',personalizada:'Para mim'};
  function norm(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
  function detect(q){
   const x=norm(q);
@@ -1393,17 +1396,28 @@ fetch('catalogo.json',{cache:'no-store'})
  function create(mood){
   if(typeof tracks==='undefined'||!Array.isArray(tracks)||!tracks.length){status.textContent='Aguarde a biblioteca carregar.';return;}
   const words=moods[mood]||[];
-  const recent=Array.isArray(playQueue)?new Set(playQueue.slice(-5)):new Set();
+  const recent=new Set(recentIds.slice(0,12));
+  const personalized=mood==='personalizada';
+  const genreOf=track=>norm(genres[track.track_id]||track.media.genre);
+  const likedGenres=new Set(personalized
+   ? tracks.filter(track=>track?.media&&favorites.has(track.track_id)).map(genreOf).filter(g=>g&&g!=='outros')
+   : []);
   const ranked=tracks.filter(t=>t&&t.track_id&&t.download_url&&t.media).map(t=>{
    const m=t.media||{};
-   const meta=norm([m.title,m.text,m.artist,m.genre].join(' '));
+   const genre=genreOf(t);
+   const meta=norm([m.title,m.text,m.artist,m.genre,genre].join(' '));
    const matches=words.filter(w=>meta.includes(w));
-   return {t,score:matches.length*3-(recent.has(t.track_id)?2:0),matches};
+   const favorite=personalized&&favorites.has(t.track_id);
+   const similar=likedGenres.has(genre);
+   const reason=matches.length?'Combina com '+labels[mood]+': '+matches.join(', '):
+    favorite?'Uma das suas favoritas':similar?'Gênero presente nas suas favoritas':'Descoberta da biblioteca';
+   return {t,score:matches.length*3+(favorite?4:similar?3:0)-(recent.has(t.track_id)?2:0),reason};
   }).sort((a,b)=>b.score-a.score||String(a.t.track_id).localeCompare(String(b.t.track_id))).slice(0,12);
   results.replaceChildren();
   if(!ranked.length){status.textContent='Nenhuma faixa disponível para esta seleção.';return;}
-  status.textContent=ranked.length+' músicas selecionadas em '+mood+'.';
-  const controls=document.createElement('div');controls.style.margin='10px 0';
+  status.textContent=ranked.length+' músicas · '+labels[mood]+
+   (personalized&&!favorites.size?' · marque faixas como favoritas para personalizar a seleção.':'.');
+  const controls=document.createElement('div');controls.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin:10px 0';
   const start=document.createElement('button');start.type='button';start.textContent='Ouvir seleção';start.style.borderRadius='8px';
   start.addEventListener('click',()=>{
    aggilliDjQueueActive=true;
@@ -1411,14 +1425,32 @@ fetch('catalogo.json',{cache:'no-store'})
    if(window.aggilliRenderQueue)window.aggilliRenderQueue();
    if(typeof playTrack==='function')playTrack(ranked[0].t);
   });
-  controls.append(start);results.append(controls);
-  ranked.forEach(({t,matches},i)=>{
+  const saveSelection=document.createElement('button');
+  saveSelection.type='button';saveSelection.textContent='Salvar como playlist';
+  saveSelection.addEventListener('click',()=>{
+   const base='DJ ANI · '+labels[mood];
+   let name=base;
+   for(let version=2;playlists.has(name);version++)name=base+' '+version;
+   playlists.set(name,new Set(ranked.map(({t})=>t.track_id)));
+   if(!savePlaylists()){
+    playlists.delete(name);
+    status.textContent='O navegador não permitiu salvar a seleção.';
+    return;
+   }
+   addPlaylistOption(name);
+   activePlaylist.value=name;
+   render();
+   saveSelection.disabled=true;
+   status.textContent='Playlist salva: '+name;
+  });
+  controls.append(start,saveSelection);results.append(controls);
+  ranked.forEach(({t,reason},i)=>{
    const line=document.createElement('div');
    line.style.cssText='display:flex;gap:8px;align-items:center;border-top:1px solid #355047;padding:8px 0;cursor:pointer';
    const info=document.createElement('div');info.style.flex='1';
    const title=document.createElement('strong');title.textContent=(i+1)+'. '+String(t.media.title||t.media.text||'Faixa');
    title.style.cssText='display:block;font-size:12px';
-   const why=document.createElement('small');why.textContent=matches.length?'Combina com '+mood+': '+matches.join(', '):'Descoberta da biblioteca';
+   const why=document.createElement('small');why.textContent=reason;
    why.style.color='#9cbab1';info.append(title,why);
    line.setAttribute('role','button');line.tabIndex=0;
    line.style.cursor='pointer';line.setAttribute('aria-label','Reproduzir '+title.textContent);
