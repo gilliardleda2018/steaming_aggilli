@@ -12,7 +12,8 @@ QUEUE = BASE / "sync-requests" / "pending"
 STATUS = BASE / "sync-status.json"
 LOCK = BASE / "sync-worker.lock"
 UNIT = "aggilli-nextcloud-sync.service"
-CATALOG_REFRESH = "/home/gilliard/projetos/steaming_aggilli/integrations/nextcloud_azura/refresh_player_catalog.py"
+# Installed side by side in /opt/aggilli-sync/current, never from a user's clone.
+CATALOG_REFRESH = str(Path(__file__).resolve().with_name("refresh_player_catalog.py"))
 PYTHON = "/opt/aggilli-nextcloud-sync-venv/bin/python"
 
 

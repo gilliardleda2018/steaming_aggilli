@@ -33,6 +33,23 @@ class ImportableNameTests(unittest.TestCase):
                 self.assertFalse(sync.importable(name))
 
 
+class DeploymentLayoutTests(unittest.TestCase):
+    def test_worker_refreshes_catalog_from_its_own_folder(self):
+        worker = PATH.with_name("queue_worker.py")
+        spec = importlib.util.spec_from_file_location("aggilli_queue_worker_layout", worker)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self.assertEqual(Path(module.CATALOG_REFRESH), worker.resolve().with_name("refresh_player_catalog.py"))
+        self.assertNotIn("/home/", worker.read_text(encoding="utf-8"))
+
+    def test_deploy_script_points_services_to_opt(self):
+        script = (PATH.parents[2] / "scripts" / "deploy-sync-code.sh").read_text(encoding="utf-8")
+        self.assertIn("readonly base=/opt/aggilli-sync", script)
+        self.assertIn('git -C "$repo" merge-base --is-ancestor "$commit" "origin/$branch"', script)
+        self.assertIn("if systemctl is-active --quiet aggilli-nextcloud-sync.service; then", script)
+        self.assertIn("--rollback", script)
+
+
 @unittest.skipUnless(shutil.which("ffmpeg"), "ffmpeg not installed")
 class ConversionTests(unittest.TestCase):
     def test_m4a_and_webm_become_mp3(self):
