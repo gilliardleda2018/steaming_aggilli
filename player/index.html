@@ -547,7 +547,7 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
  <button type="button" id="aggilliDjCommercialClear" style="border-radius:8px;margin:8px 0">Limpar acesso</button>
 </details>
 <div id="aggilliDjCommercialResults" aria-live="polite"></div>
- <div style="font-size:11px;color:#a5b8b0;margin-top:10px">Recomendações locais por metadados. A integração conversacional com a ANI será habilitada após validar a API e as permissões comerciais.</div>
+ <div style="font-size:11px;color:#a5b8b0;margin-top:10px">"Pedir à ANI" entende o pedido com o modelo da ANI; a escolha das faixas é sempre da sua biblioteca. Sem conexão com a ANI, a seleção é local.</div>
 </section>
 <!-- AGGILLI_UNIFIED_QUEUE_V1 -->
 <section id="aggilliQueuePanel" hidden aria-label="Fila de reprodução" style="margin:12px 0;padding:14px;border:1px solid #37564b;border-radius:12px;background:#101d1b;color:#eafff4">
@@ -2053,21 +2053,27 @@ fetch('catalogo.json',{cache:'no-store'})
   const configuredApi=document.getElementById('aggilliDjApi');
   let base;
   try{base=new URL(configuredApi.value)}catch(_){}
-  if(!base||base.protocol!=='https:'||base.origin!==location.origin||
-    base.username||base.password||base.search||base.hash||credentials.value.length<32){
-   create(detect(query),undefined,' Seleção local. Para usar o modelo, configure uma sessão ANI no mesmo endereço do player.');
+  // Com sessão de ouvinte, usa a rota da conta; sem ela, a rota do player (mesma origem, só interpretação).
+  const listenerSession=!!base&&base.protocol==='https:'&&base.origin===location.origin&&
+    !base.username&&!base.password&&!base.search&&!base.hash&&credentials.value.length>=32;
+  if(!listenerSession&&location.protocol!=='https:'){
+   create(detect(query),undefined,' Seleção local: a ANI online só responde pelo endereço HTTPS do player.');
    return;
   }
   const revision=++selectionRevision;
-  const bearer=credentials.value;
-  const endpoint=configuredApi.value;
-  const stillCurrent=()=>revision===selectionRevision&&credentials.value===bearer&&configuredApi.value===endpoint&&prompt.value.trim()===query;
+  const bearer=listenerSession?credentials.value:'';
+  const endpoint=listenerSession?configuredApi.value:'';
+  const url=listenerSession?base.href.replace(/\/$/,'')+'/listeners/dj/intent'
+   :new URL('commercial-api/player/dj/intent',location.href).href;
+  const headers={'Content-Type':'application/json'};
+  if(bearer)headers.Authorization='Bearer '+bearer;
+  const stillCurrent=()=>revision===selectionRevision&&credentials.value===(bearer||credentials.value)&&
+   (!listenerSession||configuredApi.value===endpoint)&&prompt.value.trim()===query;
   interpret.disabled=true;
   status.textContent='A ANI está interpretando seu pedido…';
   try{
-   const response=await fetch(base.href.replace(/\/$/,'')+'/listeners/dj/intent',{
-    method:'POST',redirect:'error',cache:'no-store',credentials:'omit',
-    headers:{'Authorization':'Bearer '+bearer,'Content-Type':'application/json'},
+   const response=await fetch(url,{
+    method:'POST',redirect:'error',cache:'no-store',credentials:'omit',headers,
     body:JSON.stringify({prompt:query})
    });
    if(!response.ok)throw Error('HTTP '+response.status);

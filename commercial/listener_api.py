@@ -5,7 +5,9 @@ import os
 import re
 import secrets
 import sqlite3
+import threading
 import time
+from collections import deque
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
@@ -218,6 +220,45 @@ def dj_intent(payload: DjIntentRequest, response: Response, listener=Depends(cur
     if not payload.prompt.strip():
         raise HTTPException(422, "Empty musical request")
     enforce_limit(listener["id"], "dj-session", 10)
+    response.headers["Cache-Control"] = "private, no-store"
+    return resolve_intent(
+        payload.prompt,
+        model_enabled=os.environ.get("AGGILLI_ANI_ENABLED", "false").lower() == "true",
+    )
+
+
+# O player chama a ANI sem conta de ouvinte. Só a interpretação do pedido passa pelo
+# modelo (nada de faixas, direitos ou áudio), e um teto global protege a cota gratuita.
+PLAYER_ORIGIN_DEFAULT = "https://server.taila400aa.ts.net"
+PLAYER_LIMITS = ((60, 12), (86400, 500))  # (janela em segundos, pedidos)
+_player_calls = deque()
+_player_lock = threading.Lock()
+
+
+def consume_player_quota(now=None) -> int:
+    """Count one player request; return seconds to wait when a window is full."""
+    now = time.monotonic() if now is None else now
+    longest = max(window for window, _ in PLAYER_LIMITS)
+    with _player_lock:
+        while _player_calls and now - _player_calls[0] >= longest:
+            _player_calls.popleft()
+        for window, limit in PLAYER_LIMITS:
+            recent = [t for t in _player_calls if now - t < window]
+            if len(recent) >= limit:
+                return max(1, int(window - (now - recent[0])) + 1)
+        _player_calls.append(now)
+    return 0
+
+
+@app.post("/player/dj/intent")
+def player_dj_intent(payload: DjIntentRequest, response: Response, origin: str | None = Header(default=None)):
+    if origin != os.environ.get("AGGILLI_PLAYER_ORIGIN", PLAYER_ORIGIN_DEFAULT):
+        raise HTTPException(403, "Only the Aggilli Music player may call this route")
+    if not payload.prompt.strip():
+        raise HTTPException(422, "Empty musical request")
+    retry_after = consume_player_quota()
+    if retry_after:
+        raise HTTPException(429, "Too many requests", headers={"Retry-After": str(retry_after)})
     response.headers["Cache-Control"] = "private, no-store"
     return resolve_intent(
         payload.prompt,

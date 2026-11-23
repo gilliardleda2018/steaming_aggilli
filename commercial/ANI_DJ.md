@@ -50,3 +50,16 @@ The original Winamp, Android player, Nextcloud, AzuraCast and DNS are unchanged.
   para a chave e sugere um Flash estável.
 - No plano gratuito o Google pode usar os pedidos para melhorar os modelos; só o texto
   do pedido musical é enviado.
+
+
+## ANI no player sem conta de ouvinte
+
+`POST /player/dj/intent` (via `https://server.taila400aa.ts.net/music/commercial-api/`) devolve só a
+interpretação do pedido (`mood`, `title`, `genre`, `minutes`, `avoid_repeats`, `engine`). Não lista
+faixas, não concede direitos e não toca áudio; a seleção é feita pelo player na biblioteca local.
+
+- Aceita somente o cabeçalho `Origin` do player (`AGGILLI_PLAYER_ORIGIN`, padrão
+  `https://server.taila400aa.ts.net`).
+- Teto global para proteger a cota gratuita do modelo: 12 pedidos por minuto e 500 por dia
+  (`429` com `Retry-After` acima disso). O contador fica na memória do processo.
+- O serviço só é alcançável pelo tailnet; o `Origin` não é uma autenticação forte.
