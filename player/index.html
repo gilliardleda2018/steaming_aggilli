@@ -293,6 +293,24 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
 .rotary-dial:focus-within{outline:2px solid #285a65;outline-offset:3px}
 @media(max-width:360px){.rotary-dial{--size:52px}.volume-dial .rotary-dial{--size:65px}}
 </style>
+<style>
+.aggilli-eq-bands{
+ display:grid;grid-template-columns:repeat(10,minmax(46px,1fr));gap:6px;overflow-x:auto;
+ padding:9px 5px 10px;border:1px solid #8e9594;border-radius:3px;scrollbar-color:#535f61 #c2c7c6;
+ background:repeating-linear-gradient(0deg,#ffffff18 0 1px,#31383a12 1px 3px),linear-gradient(110deg,#b4bbba,#e0e1d9,#bdc2be);
+}
+.aggilli-eq-bands label{display:grid;justify-items:center;align-content:start;gap:7px;font-size:11px;letter-spacing:0}
+.aggilli-eq-bands output{font-size:10px;white-space:nowrap}
+.aggilli-eq-bands input[type="range"]{
+ writing-mode:vertical-lr;direction:rtl;appearance:none;-webkit-appearance:none;
+ width:31px;height:95px;margin:0;cursor:ns-resize;
+ background:repeating-linear-gradient(0deg,transparent 0 10px,#6e777754 10px 11px) center/31px 100% no-repeat;
+}
+.aggilli-eq-bands input::-webkit-slider-runnable-track{width:6px;border-radius:1px;background:#171b1c;box-shadow:inset 1px 0 #000}
+.aggilli-eq-bands input::-moz-range-track{width:6px;border-radius:1px;background:#171b1c}
+.aggilli-eq-bands input::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:12px;margin-left:-10px;border:1px solid #505758;border-radius:2px;background:linear-gradient(#f2f2ed,#9ca3a2 45%,#666d6e 49%,#d2d6d0 58%,#888e8c);box-shadow:0 2px 2px #1118}
+.aggilli-eq-bands input::-moz-range-thumb{width:25px;height:11px;border:1px solid #505758;border-radius:2px;background:linear-gradient(#f2f2ed,#9ca3a2 45%,#666d6e 49%,#d2d6d0 58%,#888e8c);box-shadow:0 2px 2px #1118}
+</style>
 </head>
 <body>
 <main>
@@ -328,14 +346,21 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
     <div class="aggilli-eq-top">
       <label for="aggilliPreset">PRESET</label>
       <select id="aggilliPreset" aria-label="Preset do equalizador">
-        <option value="flat">Flat</option><option value="rock">Rock</option><option value="pop">Pop</option><option value="bass">Bass</option><option value="vocal">Vocal</option>
+        <option value="custom" disabled>Manual</option><option value="flat">Flat</option><option value="rock">Rock</option><option value="pop">Pop</option><option value="bass">Bass</option><option value="vocal">Vocal</option>
       </select>
       <button type="button" id="aggilliEqReset">Zerar</button>
     </div>
-    <div class="aggilli-eq-bands">
-      <label>GRAVES <span class="rotary-dial"><span class="rotary-cap" aria-hidden="true"></span><input id="aggilliBass" type="range" min="-12" max="12" value="0" step="1" aria-label="Graves"></span><output id="aggilliBassValue" for="aggilliBass">0 dB</output></label>
-      <label>MÉDIOS <span class="rotary-dial"><span class="rotary-cap" aria-hidden="true"></span><input id="aggilliMid" type="range" min="-12" max="12" value="0" step="1" aria-label="Médios"></span><output id="aggilliMidValue" for="aggilliMid">0 dB</output></label>
-      <label>AGUDOS <span class="rotary-dial"><span class="rotary-cap" aria-hidden="true"></span><input id="aggilliTreble" type="range" min="-12" max="12" value="0" step="1" aria-label="Agudos"></span><output id="aggilliTrebleValue" for="aggilliTreble">0 dB</output></label>
+    <div class="aggilli-eq-bands" role="group" aria-label="Equalizador gráfico de dez bandas">
+      <label>32<input id="aggilliEq32" type="range" min="-12" max="12" value="0" step="1" aria-label="32 Hz" aria-orientation="vertical"><output for="aggilliEq32" id="aggilliEq32Value">0 dB</output></label>
+      <label>64<input id="aggilliEq64" type="range" min="-12" max="12" value="0" step="1" aria-label="64 Hz" aria-orientation="vertical"><output for="aggilliEq64" id="aggilliEq64Value">0 dB</output></label>
+      <label>125<input id="aggilliEq125" type="range" min="-12" max="12" value="0" step="1" aria-label="125 Hz" aria-orientation="vertical"><output for="aggilliEq125" id="aggilliEq125Value">0 dB</output></label>
+      <label>250<input id="aggilliEq250" type="range" min="-12" max="12" value="0" step="1" aria-label="250 Hz" aria-orientation="vertical"><output for="aggilliEq250" id="aggilliEq250Value">0 dB</output></label>
+      <label>500<input id="aggilliEq500" type="range" min="-12" max="12" value="0" step="1" aria-label="500 Hz" aria-orientation="vertical"><output for="aggilliEq500" id="aggilliEq500Value">0 dB</output></label>
+      <label>1k<input id="aggilliEq1000" type="range" min="-12" max="12" value="0" step="1" aria-label="1000 Hz" aria-orientation="vertical"><output for="aggilliEq1000" id="aggilliEq1000Value">0 dB</output></label>
+      <label>2k<input id="aggilliEq2000" type="range" min="-12" max="12" value="0" step="1" aria-label="2000 Hz" aria-orientation="vertical"><output for="aggilliEq2000" id="aggilliEq2000Value">0 dB</output></label>
+      <label>4k<input id="aggilliEq4000" type="range" min="-12" max="12" value="0" step="1" aria-label="4000 Hz" aria-orientation="vertical"><output for="aggilliEq4000" id="aggilliEq4000Value">0 dB</output></label>
+      <label>8k<input id="aggilliEq8000" type="range" min="-12" max="12" value="0" step="1" aria-label="8000 Hz" aria-orientation="vertical"><output for="aggilliEq8000" id="aggilliEq8000Value">0 dB</output></label>
+      <label>16k<input id="aggilliEq16000" type="range" min="-12" max="12" value="0" step="1" aria-label="16000 Hz" aria-orientation="vertical"><output for="aggilliEq16000" id="aggilliEq16000Value">0 dB</output></label>
     </div>
     <small id="aggilliEqStatus" role="status">O equalizador é ativado ao reproduzir áudio.</small>
   </div>
@@ -984,7 +1009,8 @@ fetch('catalogo.json',{cache:'no-store'})
   const panel=document.getElementById('aggilliEqPanel');
   const preset=document.getElementById('aggilliPreset');
   const status=document.getElementById('aggilliEqStatus');
-  const bands=['Bass','Mid','Treble'];
+  const frequencies=[32,64,125,250,500,1000,2000,4000,8000,16000];
+  const bands=frequencies.map(hz=>document.getElementById('aggilliEq'+hz));
   const presets={flat:[0,0,0],rock:[4,-2,4],pop:[-1,3,3],bass:[8,-1,0],vocal:[-3,5,2]};
   let context=null,filters=null,analyser=null;
   function updateDial(input){
@@ -1013,7 +1039,7 @@ fetch('catalogo.json',{cache:'no-store'})
     });
     input.addEventListener('lostpointercapture',()=>{drag=undefined;});
   }
-  [volume,...bands.map(name=>document.getElementById('aggilli'+name))].forEach(enableDial);
+  enableDial(volume);
 
   function readVolume(){
     try {const raw=localStorage.getItem('aggilli-volume');if(raw===null)return 75;const v=Number(raw);return Number.isFinite(v)&&v>=0&&v<=100?v:75;}catch(e){return 75;}
@@ -1031,27 +1057,27 @@ fetch('catalogo.json',{cache:'no-store'})
   mute.addEventListener('click',()=>{const muted=!activePlayer().muted;mediaElements.forEach(media=>{media.muted=muted});setVolume(volume.value)});
   toggle.addEventListener('click',()=>{panel.hidden=!panel.hidden;toggle.setAttribute('aria-expanded',String(!panel.hidden))});
   function updateBands(values){
-    bands.forEach((name,i)=>{
-      const slider=document.getElementById('aggilli'+name);
+    bands.forEach((slider,i)=>{
       slider.value=String(values[i]);
-      updateDial(slider);
-      document.getElementById('aggilli'+name+'Value').textContent=values[i]+' dB';
+      slider.setAttribute('aria-valuetext',values[i]+' dB');
+      document.getElementById(slider.id+'Value').textContent=values[i]+' dB';
       if(filters)filters[i].gain.value=values[i];
     });
     save('aggilli-eq-bands',JSON.stringify(values));
   }
-  function currentBands(){return bands.map(name=>Number(document.getElementById('aggilli'+name).value))}
-  function choosePreset(name){updateBands(presets[name]||presets.flat);preset.value=name;save('aggilli-eq-preset',name)}
+  function currentBands(){return bands.map(slider=>Number(slider.value))}
+  function expandBands(values){return frequencies.map(hz=>values[hz<=125?0:hz<=2000?1:2])}
+  function choosePreset(name){updateBands(expandBands(presets[name]||presets.flat));preset.value=name;save('aggilli-eq-preset',name)}
   preset.addEventListener('change',()=>choosePreset(preset.value));
   document.getElementById('aggilliEqReset').addEventListener('click',()=>choosePreset('flat'));
-  bands.forEach(name=>document.getElementById('aggilli'+name).addEventListener('input',()=>{
-    preset.value='flat';save('aggilli-eq-preset','flat');updateBands(currentBands());
+  bands.forEach(slider=>slider.addEventListener('input',()=>{
+    preset.value='custom';save('aggilli-eq-preset','custom');updateBands(currentBands());
   }));
   try {
     const saved=JSON.parse(localStorage.getItem('aggilli-eq-bands')||'null');
-    if(Array.isArray(saved)&&saved.length===3&&saved.every(x=>Number.isFinite(x)&&x>=-12&&x<=12))updateBands(saved);
+    if(Array.isArray(saved)&&[3,bands.length].includes(saved.length)&&saved.every(x=>Number.isInteger(x)&&x>=-12&&x<=12))updateBands(saved.length===3?expandBands(saved):saved);
     else choosePreset('flat');
-    const name=localStorage.getItem('aggilli-eq-preset');if(name&&presets[name])preset.value=name;
+    const name=localStorage.getItem('aggilli-eq-preset');if(name==='custom'||Object.hasOwn(presets,name))preset.value=name;
   }catch(e){choosePreset('flat')}
   async function activate(){
     const AudioContextClass=window.AudioContext||window.webkitAudioContext;
@@ -1061,13 +1087,21 @@ fetch('catalogo.json',{cache:'no-store'})
         context=new AudioContextClass();
         const audioSource=context.createMediaElementSource(player);
         const videoSource=context.createMediaElementSource(videoPlayer);
-        const low=context.createBiquadFilter();low.type='lowshelf';low.frequency.value=180;
-        const mid=context.createBiquadFilter();mid.type='peaking';mid.frequency.value=1000;mid.Q.value=0.8;
-        const high=context.createBiquadFilter();high.type='highshelf';high.frequency.value=4500;
-        audioSource.connect(low);videoSource.connect(low);low.connect(mid);mid.connect(high);analyser=context.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=0.78;
-         high.connect(analyser);analyser.connect(context.destination);
-         initSpectrum();
-        filters=[low,mid,high];updateBands(currentBands());
+        filters=frequencies.map(hz=>{
+          const filter=context.createBiquadFilter();
+          filter.type='peaking';
+          filter.frequency.value=Math.min(hz,context.sampleRate*.49);
+          filter.Q.value=1.4;
+          return filter;
+        });
+        analyser=context.createAnalyser();
+        analyser.fftSize=8192;
+        analyser.smoothingTimeConstant=.78;
+        audioSource.connect(filters[0]);videoSource.connect(filters[0]);
+        filters.forEach((filter,i)=>filter.connect(filters[i+1]||analyser));
+        analyser.connect(context.destination);
+        initSpectrum();
+        updateBands(currentBands());
       }
       if(context.state==='suspended')await context.resume();
       status.textContent=context.state==='running'?'Equalizador ativo':'Toque em reproduzir para ativar o equalizador.';
@@ -1094,7 +1128,7 @@ fetch('catalogo.json',{cache:'no-store'})
        const w=Math.round(rect.width*dpr),h=Math.round(rect.height*dpr);
        if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
        ctx.clearRect(0,0,w,h);
-       ctx.fillStyle='#07110d';ctx.fillRect(0,0,w,h);
+       ctx.fillStyle='#0d171b';ctx.fillRect(0,0,w,h);
        ctx.strokeStyle='rgba(66,125,82,.12)';ctx.lineWidth=dpr;
        for(let y=0;y<h;y+=24*dpr){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
        const active=context.state==='running'&&!activePlayer().paused;
@@ -1102,21 +1136,30 @@ fetch('catalogo.json',{cache:'no-store'})
        const count=Math.max(16,Math.min(92,Math.floor(rect.width/9)));
        const slot=w/count,barW=Math.max(2*dpr,slot-2*dpr);
        const maxH=h-36*dpr;
-       const gradient=ctx.createLinearGradient(0,h,0,h-maxH);
-       gradient.addColorStop(0,'#254a54');gradient.addColorStop(.5,'#71b8c8');gradient.addColorStop(1,'#dcf5f7');
-       ctx.fillStyle=gradient;
+       const hzPerBin=context.sampleRate/analyser.fftSize;
+       const maxHz=Math.min(16000,context.sampleRate*.48);
        for(let i=0;i<count;i++){
-         // Escala não linear para dar mais espaço às frequências graves.
-         const start=Math.floor(Math.pow(i/count,1.65)*(bins.length*.75));
-         const end=Math.max(start+1,Math.floor(Math.pow((i+1)/count,1.65)*(bins.length*.75)));
+         const lowHz=32*Math.pow(maxHz/32,i/count);
+         const highHz=32*Math.pow(maxHz/32,(i+1)/count);
+         const frequency=Math.sqrt(lowHz*highHz);
+         const start=Math.max(1,Math.floor(lowHz/hzPerBin));
+         const end=Math.min(bins.length,Math.max(start+1,Math.ceil(highHz/hzPerBin)));
          let energy=0;
          for(let j=start;j<end;j++)energy=Math.max(energy,bins[j]);
          const level=active?Math.pow(energy/255,1.4):0;
          const bh=level*maxH;
          const x=i*slot+1*dpr;
-         if(bh>1){ctx.fillRect(x,h-bh,barW,bh)}
-         peaks[i]=Math.max(bh, (peaks[i]||0)-2.3*dpr);
-         if(peaks[i]>2){ctx.fillStyle='#a8f7be';ctx.fillRect(x,h-peaks[i]-3*dpr,barW,2*dpr);ctx.fillStyle=gradient}
+         // Âmbar nos graves, ciano nos médios e violeta nos agudos.
+         const hue=frequency<250?36:frequency<2500?185:278;
+         if(bh>1){
+           ctx.fillStyle='hsl('+hue+' 79% '+(43+level*23)+'%)';
+           ctx.fillRect(x,h-bh,barW,bh);
+         }
+         peaks[i]=Math.max(bh,(peaks[i]||0)-2.3*dpr);
+         if(peaks[i]>2){
+           ctx.fillStyle='hsl('+hue+' 86% 77%)';
+           ctx.fillRect(x,h-peaks[i]-3*dpr,barW,2*dpr);
+         }
        }
        document.getElementById('aggilliSpectrumState').textContent=active?'ÁUDIO EM TEMPO REAL':'AGUARDANDO ÁUDIO';
      }
@@ -1131,7 +1174,7 @@ fetch('catalogo.json',{cache:'no-store'})
   },{capture:true});
   player.addEventListener('play',()=>{void activate()});
   videoPlayer.addEventListener('play',()=>{void activate()});
-  videoPlayer.addEventListener('volumechange',()=>{if(!videoPlayer.hidden){volume.value=String(Math.round(videoPlayer.volume*100));volumeValue.textContent=volume.value+'%';mute.textContent=videoPlayer.muted?'🔇':'🔊'}});
+  videoPlayer.addEventListener('volumechange',()=>{if(!videoPlayer.hidden){volume.value=String(Math.round(videoPlayer.volume*100));volumeValue.textContent=volume.value+'%';updateDial(volume);mute.textContent=videoPlayer.muted?'🔇':'🔊'}});
 })();
 </script>
 
