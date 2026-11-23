@@ -476,7 +476,6 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
   <label for="aggilliDjPassword" style="font-size:12px">Senha</label>
   <input id="aggilliDjPassword" type="password" autocomplete="current-password" minlength="12" maxlength="256" required style="margin:4px 0;width:100%;border-radius:8px">
   <button type="submit" id="aggilliDjLoginRun" style="border-radius:8px;margin:8px 0">Entrar</button>
-  <button type="button" id="aggilliDjRegister" style="border-radius:8px;margin:8px 0">Criar conta de teste</button>
  </form>
  <label for="aggilliDjApi" style="font-size:12px">URL HTTPS da API comercial</label>
  <input id="aggilliDjApi" type="url" placeholder="https://staging.exemplo.com" autocomplete="off" style="margin:4px 0;width:100%;border-radius:8px">
@@ -2092,9 +2091,7 @@ fetch('catalogo.json',{cache:'no-store'})
  const loginForm=document.getElementById('aggilliDjLogin');
  const email=document.getElementById('aggilliDjEmail');
  const password=document.getElementById('aggilliDjPassword');
- const register=document.getElementById('aggilliDjRegister');
- const loginErrors={401:'E-mail ou senha incorretos.',409:'Essa conta já existe; use Entrar.',
-  422:'Dados inválidos: a senha precisa de pelo menos 12 caracteres.',429:'Muitas tentativas; aguarde um pouco.'};
+ const loginErrors={401:'E-mail ou senha incorretos.',422:'Dados inválidos: a senha precisa de pelo menos 12 caracteres.',429:'Muitas tentativas; aguarde um pouco.'};
  function sameOriginApi(){
   if(!api.value)api.value=new URL('commercial-api',location.href).href;
   const base=new URL(api.value);
@@ -2102,7 +2099,7 @@ fetch('catalogo.json',{cache:'no-store'})
    throw Error('Entre pelo player em HTTPS, com a API no mesmo endereço.');
   return base.href.replace(/\/$/,'');
  }
- async function signIn(createAccount){
+ async function signIn(){
   if(!loginForm.reportValidity())return;
   const buttons=loginForm.querySelectorAll('button');
   buttons.forEach(b=>b.disabled=true);
@@ -2111,10 +2108,6 @@ fetch('catalogo.json',{cache:'no-store'})
    const body=JSON.stringify({email:email.value.trim(),password:password.value});
    const post=path=>fetch(endpoint+path,{method:'POST',redirect:'error',cache:'no-store',credentials:'omit',
     headers:{'Content-Type':'application/json'},body});
-   if(createAccount){
-    const created=await post('/listeners/register');
-    if(!created.ok)throw Error(loginErrors[created.status]||'Não foi possível criar a conta (HTTP '+created.status+').');
-   }
    const response=await post('/listeners/login');
    if(!response.ok)throw Error(loginErrors[response.status]||'Não foi possível entrar (HTTP '+response.status+').');
    const session=await response.json();
@@ -2125,8 +2118,7 @@ fetch('catalogo.json',{cache:'no-store'})
   }catch(error){status.textContent=error.message;}
   finally{password.value='';buttons.forEach(b=>b.disabled=false);}
  }
- loginForm.addEventListener('submit',event=>{event.preventDefault();signIn(false);});
- register.addEventListener('click',()=>signIn(true));
+ loginForm.addEventListener('submit',event=>{event.preventDefault();signIn();});
  clear.addEventListener('click',()=>{
   revision++;
   if(token.value.length>=32&&api.value){

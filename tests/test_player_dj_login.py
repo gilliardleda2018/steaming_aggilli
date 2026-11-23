@@ -14,7 +14,7 @@ class PlayerDjLoginTests(unittest.TestCase):
     def test_login_only_talks_to_same_origin_https_api(self):
         self.assertIn("base.protocol!=='https:'||base.origin!==location.origin", COMMERCIAL)
         self.assertIn("'/listeners/login'", COMMERCIAL)
-        self.assertIn("'/listeners/register'", COMMERCIAL)
+        self.assertNotIn("'/listeners/register'", COMMERCIAL)
         self.assertIn("credentials:'omit'", COMMERCIAL)
 
     def test_password_is_cleared_and_never_stored_or_shown(self):
