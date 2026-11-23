@@ -614,6 +614,82 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
 
 </main>
 <script>
+/* AGGILLI_LIBRARY_TIDY_V1: organiza como o player mostra o catálogo, sem alterar o AzuraCast. */
+const libraryTidy=(()=>{
+ const fold=v=>String(v||'').normalize('NFKC').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+ const keyOf=v=>fold(v).replace(/[^a-z0-9]+/g,'');
+ // Rótulos de vídeo e de estilo que vêm do nome do arquivo, não do nome da música.
+ const noise=/\b(?:official|oficial|video|audio|lyrics?|letra|hd|4k|ai|remaster(?:ed)?|visualizer|full album|original song|original mix)\b/i;
+ const style=/\b(?:psych\w*|psyc|blues|acid|kraut\w*|stoner|rock|new age|meditation|cosmic|cover|song)\b/i;
+ const small=new Set(['a','an','and','the','of','in','on','to','at','for','by','with','de','da','do','das','dos','e','o','os','as','em','no','na']);
+ // Só arruma nomes todo em minúsculas; quem já escreveu com maiúsculas fica como está.
+ const titleCase=text=>/\p{Lu}/u.test(text)?text:text.split(' ')
+  .map((w,i)=>i&&small.has(w)?w:w.replace(/^(\P{L}*)(\p{L})/u,(all,lead,letter)=>lead+letter.toLocaleUpperCase('pt-BR'))).join(' ');
+ const tidyArtist=v=>titleCase(String(v||'').normalize('NFKC').replace(/^\s*\d{2,3}[\s._-]+/,'').replace(/\s+/g,' ').trim());
+ function segments(raw){
+  return String(raw||'').normalize('NFKC')
+   .replace(/\[[A-Za-z0-9_-]{11}\]/g,' ').replace(/\.f\d{2,4}\s*$/,'')
+   .replace(/^\s*\d{2,3}[\s._-]+/,'').replace(/["“”]/g,'')
+   .replace(/\(([^)]*)\)|\[([^\]]*)\]/g,(all,a,b)=>noise.test(a??b)||style.test(a??b)?' ':all)
+   .split(/\s*[|•]\s*|\s{2,}|\s+\/\s+/).map(x=>x.replace(/\s+/g,' ').trim())
+   .filter(x=>x&&!(noise.test(x)&&x.split(' ').length<=5));
+ }
+ // Gênero sugerido pelo próprio nome; edições do ouvinte e do generos.json com gênero real têm prioridade.
+ const progressive=/\b(?:pink floyd|roger waters|david gilmour|alan parsons)\b/;
+ const rock=/\b(?:psych\w*|psyc|stoner|kraut\w*|acid rock|blues|rock|ozzy|saykodelik)\b/;
+ const electronic=/\b(?:deep house|house|club mix|original mix|dance|edm|techno|trance|remix|mix 20\d\d)\b/;
+ function suggestGenre(text){
+  const x=fold(text).replace(/[^a-z0-9]+/g,' ');
+  return progressive.test(x)?'Rock Progressivo':rock.test(x)?'Rock':electronic.test(x)?'Eletronica':'';
+ }
+ function organize(data,{genres={},saved={}}={}){
+  const list=(Array.isArray(data)?data:[]).filter(t=>t&&t.track_id&&t.media);
+  // Artistas conhecidos do próprio catálogo, com a grafia mais caprichada (com maiúsculas).
+  const artists=new Map();
+  for(const t of list){
+   const name=tidyArtist(t.media.artist);const key=keyOf(name);
+   if(key&&(!artists.has(key)||/[A-Z]/.test(t.media.artist)))artists.set(key,name);
+  }
+  const prepared=list.map(t=>{
+   const m=t.media;
+   const original={artist:m.artist||'',title:m.title||m.text||''};
+   let artist=tidyArtist(m.artist);
+   const parts=segments(original.title);
+   const named=parts.find(x=>artists.has(keyOf(x)));
+   if(!artist&&named)artist=artists.get(keyOf(named));
+   const title=titleCase(parts.find(x=>x!==named&&!artists.has(keyOf(x)))||parts[0]||'Sem título');
+   const genre=genres[t.track_id]&&genres[t.track_id]!=='Outros'?genres[t.track_id]
+    :suggestGenre([original.artist,original.title,m.text,artist].join(' '))||genres[t.track_id]||'';
+   return {t,original,artist,title,genre,key:keyOf(artist)+'|'+keyOf(title)};
+  });
+  // Mesma música enviada mais de uma vez: fica a que já tem gênero escolhido, depois a primeira.
+  const kept=new Map(), alias=new Map();
+  for(const item of prepared){
+   const first=kept.get(item.key);
+   if(!first){kept.set(item.key,item);continue;}
+   const better=!(genres[first.t.track_id]&&genres[first.t.track_id]!=='Outros')&&genres[item.t.track_id]&&genres[item.t.track_id]!=='Outros';
+   const [keep,drop]=better?[item,first]:[first,item];
+   kept.set(item.key,keep);
+   alias.set(drop.t.track_id,keep.t.track_id);
+   for(const [from,to] of alias)if(to===drop.t.track_id)alias.set(from,keep.t.track_id);
+  }
+  const resolved={};
+  const unique=[...kept.values()].map(({t,original,artist,title,genre})=>{
+   t.original=original;
+   t.media={...t.media,artist,title};
+   if(genre)resolved[t.track_id]=genre;
+   return t;
+  });
+  for(const [id,genre] of Object.entries(saved)){
+   const target=alias.get(id)||id;
+   if(typeof genre==='string')resolved[target]=genre;
+  }
+  return {tracks:unique,genres:resolved,alias,hidden:list.length-unique.length};
+ }
+ return {organize,segments,suggestGenre};
+})();
+</script>
+<script>
 const audio=document.getElementById('audio');
 const cloudVideo=document.getElementById('cloudVideo');
 const cloudPreview=new URLSearchParams(location.search).has('cloudPreview');
@@ -794,7 +870,7 @@ function drawGenres(){
   btn.style.background=genreColors[i];
   btn.textContent=name==='Forro'?'Forró':name==='Eletronica'?'Eletrônica':name;
   const small=document.createElement('small');
-  small.textContent=count+' músicas';
+  small.textContent=count+(count===1?' música':' músicas');
   btn.append(small);
   btn.onclick=()=>{
    selectedGenre=name;
@@ -980,7 +1056,7 @@ function render(){
  const playlist=playlists.get(activePlaylist.value);
  let filtered=tracks.filter(t=>{
   const m=t.media||{};const parts=trackArtistTitle(t);
-  const searchText=[parts.artist,parts.title,m.text||''].join(' ').toLocaleLowerCase('pt-BR');
+  const searchText=[parts.artist,parts.title,m.text||'',t.original?.title||''].join(' ').toLocaleLowerCase('pt-BR');
   return (libraryView!=='favorites'||favorites.has(t.track_id)) &&
    (selectedGenre==='Todos'||(genres[t.track_id]||'Outros')===selectedGenre)&&searchText.includes(q);
  });
@@ -990,7 +1066,7 @@ function render(){
   filtered=ids.map(id=>matches.get(id)).filter(Boolean);
  }
  if(!aggilliDjQueueActive)playQueue=filtered.map(t=>t.track_id);
- document.getElementById('status').textContent=filtered.length+' músicas';
+ document.getElementById('status').textContent=filtered.length+(filtered.length===1?' música':' músicas');
  if(!filtered.length){
   const empty=document.createElement('p');
   empty.className='library-empty';
@@ -1008,13 +1084,15 @@ function render(){
   const parts=trackArtistTitle(t);
   const num=document.createElement('span');num.className='winamp-number';num.textContent=row.dataset.index;
   const info=document.createElement('div');info.className='winamp-info';
-  const artist=document.createElement('strong');artist.textContent=parts.artist;
-  const title=document.createElement('small');title.textContent=parts.title+(t.source==='local'?(t.format==='mp4'?' · 🎬 Local':' · ♪ Local'):(t.source==='nextcloud'?(t.format==='mp4'?' · 🎬 Nuvem':' · ☁ Nuvem'):''));
+  // Sem artista conhecido, o título vira a linha de destaque.
+  const unknownArtist=parts.artist==='Artista não informado';
+  const artist=document.createElement('strong');artist.textContent=unknownArtist?parts.title:parts.artist;
+  const title=document.createElement('small');title.textContent=(unknownArtist?parts.artist:parts.title)+(t.source==='local'?(t.format==='mp4'?' · 🎬 Local':' · ♪ Local'):(t.source==='nextcloud'?(t.format==='mp4'?' · 🎬 Nuvem':' · ☁ Nuvem'):''));
   const select=document.createElement('select');select.className='edit-genre';select.title='Alterar gênero';select.setAttribute('aria-label','Gênero de '+parts.title);
   genreNames.filter(x=>x!=='Todos').forEach(g=>{const option=document.createElement('option');option.value=g;option.textContent=g;select.append(option)});
   select.value=genres[t.track_id]||'Outros';
   select.onclick=e=>e.stopPropagation();
-  select.onchange=e=>{e.stopPropagation();genres[t.track_id]=select.value;localStorage.setItem('aggilli-generos',JSON.stringify(genres));drawGenres();render();refreshNow()};
+  select.onchange=e=>{e.stopPropagation();genres[t.track_id]=select.value;savedGenres[t.track_id]=select.value;localStorage.setItem('aggilli-generos',JSON.stringify(savedGenres));drawGenres();render();refreshNow()};
   info.append(artist,title,select);
   const duration=document.createElement('span');duration.className='winamp-duration';duration.textContent=trackSeconds(t)===null?'--:--':formatTime(trackSeconds(t));
   const favorite=document.createElement('button');
@@ -1121,12 +1199,24 @@ cloudVideo.addEventListener('ended',()=>{if(playbackMode==='track')nextTrack()})
 fetch('catalogo.json',{cache:'no-store'})
  .then(r=>{if(!r.ok)throw Error(r.status);return r.json()})
  .then(async data=>{
-  tracks=data;
-  document.getElementById('totalTracks').textContent=tracks.length;
+  let serverGenres={};
   try {
    const r=await fetch('generos.json',{cache:'no-store'});
-   if(r.ok) genres=await r.json();
+   if(r.ok){const value=await r.json();if(value&&typeof value==='object'&&!Array.isArray(value))serverGenres=value;}
   } catch(e){console.warn('Gêneros indisponíveis',e)}
+  // Edições feitas neste aparelho (localStorage) continuam valendo por cima do servidor.
+  const organized=libraryTidy.organize(data,{genres:serverGenres,saved:savedGenres});
+  tracks=organized.tracks;
+  genres=organized.genres;
+  const keep=id=>organized.alias.get(id)||id;
+  const remap=ids=>[...new Set(ids.map(keep))];
+  const favoriteIds=remap([...favorites]);favorites.clear();favoriteIds.forEach(id=>favorites.add(id));
+  recentIds=remap(recentIds);
+  dailyHistory.ids=remap(dailyHistory.ids);
+  for(const [name,ids] of playlists)playlists.set(name,new Set(remap([...ids])));
+  const total=document.getElementById('totalTracks');
+  total.textContent=tracks.length;
+  total.title=organized.hidden?organized.hidden+' cópias repetidas ocultas':'';
   drawGenres();
   render();
  })
