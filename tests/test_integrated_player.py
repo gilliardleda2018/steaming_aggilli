@@ -5,6 +5,16 @@ PLAYER = Path(__file__).resolve().parents[1] / "player" / "index.html"
 
 
 class IntegratedPlayerTests(unittest.TestCase):
+    def test_player_shows_the_shared_release_version(self):
+        version_file = PLAYER.parents[1] / "release.properties"
+        release = dict(
+            line.split("=", 1) for line in version_file.read_text(encoding="utf-8").splitlines()
+        )
+        self.assertIn(
+            f'<span id="playerRelease">v{release["versionName"]}</span>',
+            PLAYER.read_text(encoding="utf-8"),
+        )
+
     def test_one_player_contains_dj_and_existing_features(self):
         html = PLAYER.read_text(encoding="utf-8")
         for marker in (

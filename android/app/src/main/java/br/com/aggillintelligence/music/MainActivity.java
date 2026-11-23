@@ -29,7 +29,12 @@ public class MainActivity extends Activity {
     return true;
    }
   });
-  if(state==null) web.loadUrl(HOME); else web.restoreState(state);
+  if(state==null) {
+   web.loadUrl(Uri.parse(HOME).buildUpon()
+    .appendQueryParameter("appVersion", BuildConfig.VERSION_NAME).build().toString());
+  } else {
+   web.restoreState(state);
+  }
  }
  @Override public void onBackPressed(){if(web.canGoBack()) web.goBack();else super.onBackPressed();}
  @Override protected void onSaveInstanceState(Bundle state){web.saveState(state);super.onSaveInstanceState(state);}

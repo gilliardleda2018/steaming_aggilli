@@ -4,6 +4,7 @@ on:
     branches: [feat/nextcloud-webdav-sync]
     paths:
       - 'android/**'
+      - 'release.properties'
       - 'tests/**'
       - 'integrations/nextcloud_azura/**'
       - 'commercial/**'
