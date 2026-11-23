@@ -8,8 +8,9 @@
 #
 # - Faz cópia do icecast.xml e do Caddyfile antes de mudar e volta atrás se algo falhar.
 # - Troca as senhas padrão do Icecast ("hackme"), se ainda existirem.
-# - A senha de transmissão aparece só neste terminal e fica em
-#   /etc/aggilli-music/hosted-stations/<ponto>.env (root, 0600). Nunca a copie para o Git ou para conversas.
+# - A senha de transmissão fica só em /etc/aggilli-music/hosted-stations/<ponto>.env (root, 0600)
+#   e não é mostrada ao terminar (saídas de terminal costumam ser copiadas para conversas).
+#   Para ler na hora de configurar o Oddcast:  ... host-icecast-station.sh <ponto> "<nome>" --show-password
 # - Não mexe no AzuraCast, na Aggilli Radio, no player nem no catálogo.
 set -Eeuo pipefail
 umask 077
@@ -27,7 +28,15 @@ readonly backups=/var/backups/aggilli-music
 mount=${1:-}; name=${2:-}; rotate=${3:-}
 [[ $mount =~ ^[a-z0-9][a-z0-9-]{1,30}$ ]] || { echo "Ponto inválido: use letras minúsculas, números e hífen (ex.: novaesperanca)." >&2; exit 1; }
 [[ -n $name && ${#name} -le 80 ]] || { echo "Informe o nome da rádio (até 80 caracteres)." >&2; exit 1; }
-[[ -z $rotate || $rotate == --rotate ]] || { echo "Terceiro argumento aceito: --rotate" >&2; exit 1; }
+[[ -z $rotate || $rotate == --rotate || $rotate == --show-password ]] \
+  || { echo "Terceiro argumento aceito: --rotate ou --show-password" >&2; exit 1; }
+if [[ $rotate == --show-password ]]; then
+  file=/etc/aggilli-music/hosted-stations/$mount.env
+  [[ -f $file ]] || { echo "Ponto $mount ainda não configurado." >&2; exit 1; }
+  echo "Senha de transmissão de /$mount (digite no Oddcast; não copie para conversas):"
+  sed -n 's/^PASSWORD=//p' "$file"
+  exit 0
+fi
 for file in "$icecast_conf" "$caddyfile"; do [[ -f $file && ! -L $file ]] || { echo "Arquivo ausente: $file" >&2; exit 1; }; done
 
 install -d -m 0700 "$backups" "$state_dir"
@@ -160,7 +169,6 @@ curl -fsS -m 5 -o /dev/null https://$public_host/ 2>/dev/null || curl -fsS -m 5 
 trap - ERR
 
 MOUNT=$(sed -n 's/^MOUNT=//p' "$station_env")
-PASSWORD=$(sed -n 's/^PASSWORD=//p' "$station_env")
 cat <<EOF
 
 Rádio hospedada pronta: $name
@@ -172,12 +180,12 @@ Dados para o Oddcast da rádio (só no computador deles):
                 ou $public_host (se o roteador encaminhar a 8000)
   Server Port : 8000
   Mount point : $MOUNT
-  Password    : $PASSWORD
+  Password    : (não exibida) para ler: rode este script com --show-password
   Encoder     : MP3, 96 kbps, 44100 Hz, estéreo (como já usam)
 
 Endereço para os ouvintes: https://$funnel_host$MOUNT
                            (também https://$public_host$MOUNT por IPv6)
-Não cole a senha em conversas; para trocar: rode de novo com --rotate.
+Para trocar a senha: rode de novo com --rotate.
 EOF
 if [[ -f $admin_env ]]; then echo "Senhas de administração do Icecast: $admin_env (root, 0600)."; fi
 if command -v nft >/dev/null && ! nft list ruleset 2>/dev/null | grep -q "dport 8000"; then

@@ -106,6 +106,12 @@ class HostIcecastStationTests(unittest.TestCase):
         self.assertIn("apache2ctl configtest", SCRIPT)
         self.assertIn("https://$funnel_host$MOUNT", SCRIPT)
 
+    def test_password_is_not_printed_unless_asked(self):
+        summary = SCRIPT.split('cat <<EOF\n\nRádio hospedada pronta', 1)[1]
+        self.assertNotIn("$PASSWORD", summary)
+        self.assertIn("--show-password", summary)
+        self.assertIn('sed -n \'s/^PASSWORD=//p\' "$file"', SCRIPT)
+
     def test_script_backs_up_and_restores(self):
         self.assertIn('cp -p "$icecast_conf" "$backups/icecast.xml-$stamp"', SCRIPT)
         self.assertIn("trap restore ERR", SCRIPT)
