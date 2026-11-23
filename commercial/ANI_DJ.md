@@ -31,3 +31,13 @@ music catalog to the LLM. A model cannot authorize streaming or grant a plan.
 - Production-grade model output safety, rate limits, budget and abuse controls.
 
 The original Winamp, Android player, Nextcloud, AzuraCast and DNS are unchanged.
+
+## Claude como motor da DJ ANI (homologação, 2026-11-23)
+- `AGGILLI_ANI_PROVIDER=anthropic` usa o SDK oficial da Anthropic (`anthropic==2.12.0`)
+  com `AGGILLI_ANI_MODEL=claude-opus-5-5` e `ANTHROPIC_API_KEY`.
+- A resposta é limitada por saída estruturada (JSON Schema com `mood` entre os
+  cinco climas do player e `title`), esforço `low` e `fallbacks: "default"`
+  (outro modelo responde se o Claude recusar o pedido).
+- Só o texto do pedido vai para o modelo; histórico, catálogo e dados do ouvinte não.
+- Qualquer falha (chave, rede, recusa, JSON fora do esquema) mantém a seleção local
+  (`engine=offline`). Configure com `sudo bash scripts/configure-ani-staging.sh`.

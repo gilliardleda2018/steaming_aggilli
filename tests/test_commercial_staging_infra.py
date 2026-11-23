@@ -26,9 +26,15 @@ class CommercialStagingInfraTests(unittest.TestCase):
 
     def test_ani_starts_disabled_and_template_has_no_secrets(self):
         self.assertIn("AGGILLI_ANI_ENABLED=false", ENV)
-        for key in ("AGGILLI_ANI_CHAT_URL=", "AGGILLI_ANI_API_KEY=", "AGGILLI_ANI_MODEL="):
+        self.assertIn("AGGILLI_ANI_PROVIDER=anthropic", ENV)
+        self.assertIn("AGGILLI_ANI_MODEL=claude-opus-5-5", ENV)
+        for key in ("ANTHROPIC_API_KEY=", "AGGILLI_ANI_CHAT_URL=", "AGGILLI_ANI_API_KEY="):
             line = next(l for l in ENV.splitlines() if l.startswith(key))
             self.assertEqual(line, key)
+
+    def test_staging_venv_pins_the_anthropic_sdk(self):
+        requirements = (INFRA / "requirements.txt").read_text(encoding="utf-8")
+        self.assertIn("anthropic==2.12.0", requirements)
 
     def test_route_is_same_origin_as_player(self):
         self.assertIn('<Location "/music/commercial-api/">', APACHE)
@@ -49,16 +55,18 @@ class AniSetupAssistantTests(unittest.TestCase):
     SCRIPT = (ROOT / "scripts" / "configure-ani-staging.sh").read_text(encoding="utf-8")
 
     def test_key_is_read_without_echo_and_file_stays_root_only(self):
-        self.assertIn('read -r -s -p "Chave da API', self.SCRIPT)
+        self.assertIn('read -r -s -p "Chave da API da Anthropic', self.SCRIPT)
         self.assertIn('chown root:root "$tmp"; chmod 0600 "$tmp"', self.SCRIPT)
         self.assertIn('cp -p -- "$env_file" "$backup"', self.SCRIPT)
 
-    def test_only_clean_https_urls_are_accepted(self):
-        self.assertIn("^https://[^/@?#[:space:]]+(/[^?#[:space:]]*)?$", self.SCRIPT)
+    def test_only_anthropic_keys_and_clean_model_names_are_accepted(self):
+        self.assertIn("[[ $key == sk-ant-* && $key != *[[:space:]]* ]]", self.SCRIPT)
+        self.assertIn("readonly default_model=claude-opus-5-5", self.SCRIPT)
 
-    def test_validation_reports_engine_and_hides_the_key(self):
+    def test_validation_reports_engine_without_printing_the_key(self):
         self.assertIn('print("ANI VALIDADA: engine=ani"', self.SCRIPT)
-        self.assertIn('.replace(os.environ["AGGILLI_ANI_API_KEY"], "***")', self.SCRIPT)
+        self.assertIn("except anthropic.AuthenticationError:", self.SCRIPT)
+        self.assertNotIn("print(os.environ", self.SCRIPT)
 
 
 if __name__ == "__main__":
