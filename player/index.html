@@ -495,6 +495,7 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
   <button type="button" data-view="all" aria-pressed="true">Todas</button>
   <button type="button" data-view="favorites" aria-pressed="false">Favoritas</button>
   <button type="button" data-view="recent" aria-pressed="false">Recentes</button>
+  <button type="button" data-view="today" aria-pressed="false">Ouvidas hoje</button>
   <button type="button" data-view="playlist" aria-pressed="false">Playlists</button>
  </div>
  <div class="playlist-controls">
@@ -655,6 +656,19 @@ function saveTrackIds(key,values){
 }
 const favorites=new Set(readTrackIds(favoritesKey));
 let recentIds=readTrackIds(recentKey).slice(0,50);
+const dailyHistoryKey='aggilli-library-today-v1';
+let dailyHistory={day:0,ids:[]};
+try{
+ const saved=JSON.parse(localStorage.getItem(dailyHistoryKey)||'null');
+ if(Number.isInteger(saved?.day)&&Array.isArray(saved.ids)){
+  dailyHistory={day:saved.day,ids:[...new Set(saved.ids.filter(id=>typeof id==='string'))]};
+ }
+}catch(_){}
+function todayTrackIds(now=new Date()){
+ const day=now.getFullYear()*10000+(now.getMonth()+1)*100+now.getDate();
+ if(dailyHistory.day!==day)dailyHistory={day,ids:[]};
+ return dailyHistory.ids;
+}
 const playlistsKey='aggilli-library-playlists-v1';
 const activePlaylist=document.getElementById('activePlaylist');
 const playlistForm=document.getElementById('playlistForm');
@@ -901,9 +915,9 @@ function render(){
   return (libraryView!=='favorites'||favorites.has(t.track_id)) &&
    (selectedGenre==='Todos'||(genres[t.track_id]||'Outros')===selectedGenre)&&searchText.includes(q);
  });
- if(libraryView==='recent'||libraryView==='playlist'){
+ if(libraryView==='recent'||libraryView==='today'||libraryView==='playlist'){
   const matches=new Map(filtered.map(t=>[t.track_id,t]));
-  const ids=libraryView==='recent'?recentIds:[...(playlist||[])];
+  const ids=libraryView==='recent'?recentIds:libraryView==='today'?todayTrackIds():[...(playlist||[])];
   filtered=ids.map(id=>matches.get(id)).filter(Boolean);
  }
  if(!aggilliDjQueueActive)playQueue=filtered.map(t=>t.track_id);
@@ -914,6 +928,7 @@ function render(){
   empty.textContent=q||selectedGenre!=='Todos'?'Nenhuma faixa para os filtros atuais.':
    libraryView==='favorites'?'Marque uma faixa com a estrela para salvá-la aqui.':
    libraryView==='recent'?'As faixas que você ouvir aparecerão aqui.':
+   libraryView==='today'?'Nenhuma faixa registrada hoje.':
    libraryView==='playlist'?(playlist?'Playlist vazia. Abra Todas para adicionar faixas.':'Selecione ou crie uma playlist.'):'Nenhuma faixa na biblioteca.';
   box.append(empty);
  }
@@ -1004,9 +1019,16 @@ audio.addEventListener('durationchange',updateProgress);
 cloudVideo.addEventListener('durationchange',updateProgress);
 audio.addEventListener('play',()=>{document.getElementById('mainPlay').textContent='⏸';refreshNow()});
 function recordRecent(event){
- if(playbackMode!=='track'||event.currentTarget!==activeMedia()||!currentTrackId||recentIds[0]===currentTrackId)return;
- recentIds=[currentTrackId,...recentIds.filter(id=>id!==currentTrackId)].slice(0,50);
- saveTrackIds(recentKey,recentIds);
+ if(playbackMode!=='track'||event.currentTarget!==activeMedia()||!currentTrackId)return;
+ const today=todayTrackIds();
+ if(today[0]!==currentTrackId){
+  dailyHistory.ids=[currentTrackId,...today.filter(id=>id!==currentTrackId)];
+  try{localStorage.setItem(dailyHistoryKey,JSON.stringify(dailyHistory));}catch(_){}
+ }
+ if(recentIds[0]!==currentTrackId){
+  recentIds=[currentTrackId,...recentIds.filter(id=>id!==currentTrackId)].slice(0,50);
+  saveTrackIds(recentKey,recentIds);
+ }
 }
 audio.addEventListener('playing',recordRecent);
 cloudVideo.addEventListener('playing',recordRecent);
@@ -1782,9 +1804,10 @@ fetch('catalogo.json',{cache:'no-store'})
    .sort((a,b)=>b.length-a.length)
    .find(name=>(' '+request.replace(/[^a-z0-9]+/g,' ')+' ').includes(' '+norm(name)+' '));
   const skipRecent=/\b(?:sem repet\w*|nao repet\w*|evit\w+ repet\w*)\b/.test(request);
+  const skipToday=skipRecent&&/\bhoje\b/.test(request);
   const words=moods[mood]||[];
   const recent=new Set(recentIds.slice(0,12));
-  const history=new Set(skipRecent?recentIds:[]);
+  const history=new Set(skipToday?todayTrackIds():skipRecent?recentIds:[]);
   const personalized=mood==='personalizada';
   const genreOf=track=>norm(genres[track.track_id]||track.media.genre);
   const likedGenres=new Set(personalized
@@ -1823,7 +1846,7 @@ fetch('catalogo.json',{cache:'no-store'})
   const details=[];
   if(wantedGenre)details.push(wantedGenre);
   if(minutes!==null)details.push(formatTime(seconds)+' de '+minutes+' min');
-  if(skipRecent)details.push('sem faixas do histórico recente');
+  if(skipRecent)details.push(skipToday?'sem faixas registradas hoje':'sem faixas do histórico recente');
   status.textContent=ranked.length+' músicas · '+title+
    (details.length?' · '+details.join(' · '):'')+
    (personalized&&!favorites.size?' · marque faixas como favoritas para personalizar a seleção.':'.')+note;
