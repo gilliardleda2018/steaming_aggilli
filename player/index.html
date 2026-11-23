@@ -230,6 +230,14 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
 .receiver-tools button,.receiver-tools select{padding:6px 8px;font-size:12px}
 .receiver-tools output{color:#243b3f;font-size:11px;font-variant-numeric:tabular-nums}
 .receiver-tools #aggilliDisplayToggle{margin-left:auto}
+.tuner-panel{margin-top:12px;padding:12px;border:1px solid #777f80;background:var(--metal);color:#202829}
+.tuner-scale{display:grid;gap:8px;padding:12px;background:var(--glass);color:#ffd898;font:600 13px ui-monospace,monospace}
+.tuner-scale input{width:100%;margin:0;accent-color:#e7ab57}
+.tuner-memories,.tuner-panel form{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px}
+.tuner-panel form input{flex:1 1 160px;min-width:0;margin:0}
+.tuner-panel button{background:var(--switch);color:#eef3f3;border-radius:3px;padding:6px 9px}
+.tuner-panel button[aria-current="true"]{color:#ffd898}
+#tunerStatus{display:block;margin-top:8px;font-size:12px}
 .clip-panel{margin-top:12px;padding:12px;border:1px solid #576365;border-radius:3px;background:var(--glass);color:#edf6f6}
 .clip-panel form,.clip-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 .clip-panel form label{flex-basis:100%;font-size:12px}
@@ -383,7 +391,25 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
   <output id="aggilliSleepStatus" for="aggilliSleep" aria-live="off"></output>
   <button type="button" id="aggilliDisplayToggle" aria-controls="aggilliSpectrumDisplay" aria-pressed="true">Espectro</button>
   <button type="button" id="clipToggle" aria-controls="clipPanel" aria-expanded="false">Vídeo</button>
+  <button type="button" id="tunerToggle" aria-controls="tunerPanel" aria-expanded="false">Sintonizador</button>
 </div>
+<section id="tunerPanel" class="tuner-panel" aria-label="Sintonizador de rádio" hidden>
+ <label class="tuner-scale">Sintonia
+  <output id="tunerStation" for="tunerDial">Aggilli Radio</output>
+  <input type="range" id="tunerDial" min="0" max="6" value="0" step="1">
+ </label>
+ <div class="tuner-memories" id="tunerMemories" role="group" aria-label="Memórias de estação"></div>
+ <div class="tuner-memories">
+  <button type="button" id="tunerPlay">Ouvir estação</button>
+  <button type="button" id="tunerClear" disabled>Limpar memória</button>
+ </div>
+ <form id="tunerForm">
+  <input id="tunerName" aria-label="Nome da estação" placeholder="Nome da estação" maxlength="60" required>
+  <input id="tunerUrl" aria-label="Endereço HTTPS do áudio" placeholder="URL HTTPS do áudio direto" type="url" required>
+  <button type="submit">Salvar na memória</button>
+ </form>
+ <output id="tunerStatus" role="status"></output>
+</section>
 <section id="clipPanel" class="clip-panel" aria-label="Clipes do YouTube" hidden>
  <form id="clipForm">
   <label for="clipUrl">Link do YouTube</label>
@@ -754,7 +780,7 @@ function pauseAudio(){
 function stopAudio(){
  playbackRequestId++;
  activeMedia().pause();
- const isRadio = audio.currentSrc.includes('radio.mp3');
+ const isRadio = playbackMode==='radio';
  if(isRadio){
   audio.removeAttribute('src');
   audio.load();
@@ -765,18 +791,28 @@ function stopAudio(){
   document.getElementById('now').textContent='Reprodução parada';
  }
 }
-function playRadio(){
+let radioStationName='Aggilli Radio';
+function playRadio(station){
  playbackRequestId++;
  document.getElementById('status').textContent='Rádio ao vivo';
  hideCloudVideo();
  playbackMode='radio';
  currentTrackId=null;
- audio.src='radio.mp3';
- document.getElementById('now').textContent='Aggilli Radio — Ao vivo';
+ radioStationName=station?.name||'Aggilli Radio';
+ audio.pause();
+ if(station){
+  audio.crossOrigin='anonymous';
+  audio.src=station.url;
+ }else{
+  audio.removeAttribute('crossorigin');
+  audio.src='radio.mp3';
+ }
+ document.getElementById('now').textContent=radioStationName+' — Ao vivo';
  refreshNow();
  audio.play().catch(e=>handlePlayRejection(audio,e));
 }
 async function playTrack(track){
+ audio.removeAttribute('crossorigin');
  const requestId=++playbackRequestId;
  document.getElementById('status').textContent='Carregando faixa…';
  playbackMode='track';
@@ -1320,6 +1356,86 @@ fetch('catalogo.json',{cache:'no-store'})
 </script>
 
 <script>
+/* Preset radio tuner */
+(() => {
+ const toggle=document.getElementById('tunerToggle');
+ const panel=document.getElementById('tunerPanel');
+ const dial=document.getElementById('tunerDial');
+ const output=document.getElementById('tunerStation');
+ const memories=document.getElementById('tunerMemories');
+ const play=document.getElementById('tunerPlay');
+ const clear=document.getElementById('tunerClear');
+ const name=document.getElementById('tunerName');
+ const url=document.getElementById('tunerUrl');
+ const status=document.getElementById('tunerStatus');
+ const key='aggilli-radio-memories-v1';
+ function validStation(station){
+  if(typeof station?.name!=='string'||!station.name.trim()||station.name.length>60)return false;
+  try{
+   const source=new URL(station.url);
+   return source.protocol==='https:'&&!source.username&&!source.password;
+  }catch(_){return false}
+ }
+ let saved=[];
+ try{
+  const data=JSON.parse(localStorage.getItem(key)||'[]');
+  if(Array.isArray(data))saved=data;
+ }catch(_){}
+ const stations=[null,...Array.from({length:6},(_,i)=>validStation(saved[i])?saved[i]:null)];
+ const buttons=stations.map((_,i)=>{
+  const button=document.createElement('button');
+  button.type='button';
+  button.textContent=i?'MEM '+i:'Aggilli';
+  button.addEventListener('click',()=>select(i));
+  memories.append(button);
+  return button;
+ });
+ function select(index){
+  dial.value=String(index);
+  const station=stations[index];
+  const label=index?(station?.name||'Memória '+index+' vazia'):'Aggilli Radio';
+  output.value=label;
+  dial.setAttribute('aria-valuetext',label);
+  play.disabled=!!index&&!station;
+  clear.disabled=!station;
+  name.value=station?.name||'';
+  url.value=station?.url||'';
+  buttons.forEach((button,i)=>{
+   button.setAttribute('aria-current',String(index===i));
+   button.title=i?(stations[i]?.name||'Memória '+i+' vazia'):'Aggilli Radio';
+  });
+  status.value=index?'Use um stream direto HTTPS com suporte a CORS.':'Estação original do Aggilli Music.';
+ }
+ function store(index,station){
+  const previous=stations[index];
+  stations[index]=station;
+  try{localStorage.setItem(key,JSON.stringify(stations.slice(1)))}
+  catch(_){stations[index]=previous;status.value='O navegador não permitiu salvar as memórias.';return}
+  select(index);
+  status.value=station?'Estação salva na memória '+index+'.':'Memória '+index+' limpa.';
+ }
+ toggle.addEventListener('click',()=>{
+  panel.hidden=!panel.hidden;
+  toggle.setAttribute('aria-expanded',String(!panel.hidden));
+ });
+ dial.addEventListener('input',()=>select(Number(dial.value)));
+ play.addEventListener('click',()=>{
+  const index=Number(dial.value);
+  if(!index||stations[index])playRadio(stations[index]);
+ });
+ clear.addEventListener('click',()=>store(Number(dial.value),null));
+ document.getElementById('tunerForm').addEventListener('submit',event=>{
+  event.preventDefault();
+  const index=Number(dial.value)||stations.findIndex((station,i)=>i>0&&!station);
+  const station={name:name.value.trim(),url:url.value.trim()};
+  if(index<1){status.value='Selecione uma memória para substituir.';return}
+  if(!validStation(station)){status.value='Informe um nome e um endereço HTTPS válido.';return}
+  store(index,station);
+ });
+ select(0);
+})();
+</script>
+<script>
 /* Optional YouTube video panel */
 (() => {
  const toggle=document.getElementById('clipToggle');
@@ -1704,6 +1820,7 @@ fetch('catalogo.json',{cache:'no-store'})
    audio.pause();
    playbackMode='commercial';
    currentTrackId=null;
+   audio.removeAttribute('crossorigin');
    audio.src=path+'/audio?grant='+encodeURIComponent(grant);
    document.getElementById('now').textContent=String(track.artist||'')+' — '+String(track.title||'');
    status.textContent='Reprodução protegida · DJ ANI';
@@ -1776,7 +1893,7 @@ fetch('catalogo.json',{cache:'no-store'})
  function update(){
   const track=typeof tracks!=='undefined'&&Array.isArray(tracks)?tracks.find(t=>t.track_id===currentTrackId):null;
   if(playbackMode==='radio'){
-   media.metadata=new MediaMetadata({title:'Aggilli Radio — Ao vivo',artist:'Aggilli Music',album:'Rádio'});
+   media.metadata=new MediaMetadata({title:radioStationName+' — Ao vivo',artist:'Aggilli Music',album:'Rádio'});
   }else if(track){
    const parts=trackArtistTitle(track);
    media.metadata=new MediaMetadata({title:parts.title,artist:parts.artist,album:'Aggilli Music'});
