@@ -29,6 +29,10 @@ class VoicePhraseParserTests(unittest.TestCase):
     def test_generic_verbs_need_radio_keyword(self):
         self.assertIn("(?:toque|toca|tocar|ouvir|ouca|abre|abra|abrir|liga|ligue|ligar|coloca|coloque|colocar)\\s+(?:(?:a|o|na|no)\\s+)?(?:radio|estacao)\\b", HTML)
 
+    def test_hidden_and_wide_characters_are_normalized(self):
+        self.assertIn("text.normalize('NFKD').toLowerCase()", HTML)
+        self.assertIn(".replace(/\\p{Cf}/gu,'')", HTML)
+
     def test_timer_accepts_infinitive(self):
         self.assertIn("^(?:desligue|desliga|desligar|pare|parar|temporizador|timer)", HTML)
 

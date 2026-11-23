@@ -1489,8 +1489,9 @@ fetch('catalogo.json',{cache:'no-store'})
  const toggle=get('voiceToggle'), panel=get('voicePanel');
  const input=get('voiceCommand'), mic=get('voiceMic'), status=get('voiceStatus');
  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
- const normalize=text=>text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-  .replace(/[.!?,;:]+/g,' ').replace(/\u00a0/g,' ').trim().replace(/\s+/g,' ');
+ // NFKD tamb\u00e9m converte "\uff05" e d\u00edgitos largos; \p{Cf} remove caracteres invis\u00edveis do reconhecedor.
+ const normalize=text=>text.normalize('NFKD').toLowerCase().replace(/[\u0300-\u036f]/g,'').replace(/\p{Cf}/gu,'')
+  .replace(/[.!?,;:]+/g,' ').replace(/\s+/g,' ').trim();
  // O reconhecedor de fala devolve frases naturais: tira cortesias e o chamado "Aggilli".
  const clean=text=>normalize(text)
   .replace(/^(?:(?:ok|ei|oi|hey|ola|por favor)\s+)+/,'')
