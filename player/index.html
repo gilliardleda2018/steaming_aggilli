@@ -184,15 +184,81 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
 @media(max-width:600px){.aggilli-spectrum-wrap{height:155px;margin:8px 0 10px}}
 @media(prefers-reduced-motion:reduce){.aggilli-spectrum-wrap{height:125px}}
 </style>
+<style>
+/* Brushed-aluminum stereo faceplates */
+:root{
+ --green:#a4dce3;
+ --muted:#bac4c7;
+ --metal:repeating-linear-gradient(0deg,#ffffff15 0 1px,#21282a0b 1px 3px),linear-gradient(105deg,#a9adad,#e0e1db 26%,#b6bcbd 65%,#dbdcd5);
+ --glass:linear-gradient(155deg,#253237,#0e171a 46%,#141f22);
+ --switch:linear-gradient(180deg,#4b5051,#222729 54%,#15191a);
+}
+body{background:radial-gradient(ellipse at top,#373c3e,#111415 68%);color:#e8eeef}
+main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;border-radius:8px;box-shadow:0 24px 65px #0009}
+.app-head,.player,.library-bar{
+ background:var(--metal);color:#171c1d;border:1px solid #eef0ed;border-bottom-color:#6b7070;
+ border-radius:3px;box-shadow:inset 0 1px #fff9,0 3px 6px #0008;
+}
+.app-head{padding:12px 18px;margin-bottom:11px;border-top:3px solid #daddda}
+.app-logo{width:54px;height:54px;border-radius:5px;border:1px solid #646c6e;box-shadow:0 1px 5px #0008}
+.app-head strong{font-size:19px;letter-spacing:.15em}
+.app-head small,.library-bar #status{color:#313a3c;font-weight:650}
+.player{padding:16px}
+.receiver-display{padding:13px 14px 1px;background:var(--glass);border:1px solid #3d4e52;border-radius:3px;box-shadow:inset 0 2px 9px #0009;color:#edf6f6}
+.now-label,.aggilli-spectrum-caption{color:#a4dce3;letter-spacing:.15em}
+.now-line{font-weight:600}
+.now-meta,#timeDisplay,.receiver-tools output{font-family:ui-monospace,monospace}
+.aggilli-spectrum-wrap{background:linear-gradient(180deg,#15272c,#0d1619);border-color:#344c52;border-radius:3px;height:clamp(118px,18vw,178px)}
+.aggilli-spectrum-wrap[hidden]{display:none}
+#aggilliSpectrumState{color:#9dc4c9}
+#seek{margin:10px 0 2px;accent-color:#356b73}
+.music-controls{justify-content:center;gap:5px;flex-wrap:wrap}
+.music-controls button,.aggilli-sound button,.aggilli-eq-top select,.receiver-tools button,.receiver-tools select,
+#aggilliSyncCloud,#aggilliUploadButton{
+ background:var(--switch)!important;color:#eef3f3!important;border:1px solid #161b1c!important;
+ border-radius:3px!important;box-shadow:inset 0 1px #ffffff30,0 2px 2px #0005;
+}
+.music-controls button{min-width:42px;min-height:38px;padding:6px 10px}
+.music-controls .main-play{border-radius:3px;width:54px;height:40px}
+.music-controls #radioBtn{color:#b5e2e8!important}
+.music-controls button:hover,.receiver-tools button:hover{filter:brightness(1.23)}
+.music-controls [aria-pressed="true"],.receiver-tools [aria-pressed="true"]{outline:2px solid #376e77;outline-offset:1px}
+.aggilli-sound{color:#22292b;border-top-color:#7b8384;margin-top:14px}
+.aggilli-volume-line input,.aggilli-eq-bands input{accent-color:#3b6f76}
+.aggilli-volume-line output,.aggilli-eq-bands output,#aggilliEqStatus{color:#25393d}
+.receiver-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:13px;padding-top:10px;border-top:1px solid #8a9191;font-size:12px}
+.receiver-tools button,.receiver-tools select{padding:6px 8px;font-size:12px}
+.receiver-tools output{color:#243b3f;font-size:11px;font-variant-numeric:tabular-nums}
+.receiver-tools #aggilliDisplayToggle{margin-left:auto}
+.library-bar{padding:10px 12px}
+.genre-card,.genre-card:hover{border-radius:3px;background:#323a3c!important}
+.genre-card.selected{background:#315358!important;color:#d1f4f7}
+#search,#library,.winamp-row,.winamp-row:nth-child(even){background:#182022}
+.winamp-row:nth-child(even){background:#141b1d}
+.winamp-row:hover,.winamp-row.active{background:#263e43!important}
+.list-head{background:#303a3d;color:#d2dddd}
+#aggilliDjPanel,#aggilliQueuePanel,#aggilliSyncCloudPanel,#aggilliUploadPanel{
+ background:var(--glass)!important;border:1px solid #576365!important;border-top:5px solid #abb2b1!important;border-radius:3px!important;
+}
+:focus-visible{outline:2px solid #4e9fad;outline-offset:2px}
+@media(max-width:600px){
+ main{margin:0;padding:8px;border-radius:0}
+ .player{padding:11px}.app-head{padding:10px}.app-head strong{font-size:15px}
+ .music-controls button{min-width:34px;padding:6px}
+ .receiver-tools #aggilliDisplayToggle{margin-left:0}
+}
+</style>
 </head>
 <body>
 <main>
  <div class="app-head"><img class="app-logo" src="aggilli-music-logo.jpg?v=b25dabf" alt="Logomarca oficial Aggilli Music" width="72" height="72"><div><strong>AGGILLI MUSIC</strong><small>PLAYLIST EDITOR · <span id="totalTracks">36</span> FAIXAS</small></div></div>
  <section class="player" aria-label="Reprodutor de música">
+  <div class="receiver-display">
   <div class="now-label">REPRODUZINDO AGORA</div>
   <div id="now" class="now-line" aria-live="polite">Selecione uma música</div>
   <div class="now-meta"><span id="nowGenre">Aggilli Music</span><span id="timeDisplay">00:00 / 00:00</span></div>
-  <div class="aggilli-spectrum-wrap" aria-label="Visualizador de espectro de áudio"><canvas id="aggilliSpectrum" aria-hidden="true"></canvas><div class="aggilli-spectrum-caption">SPECTRUM ANALYZER <span id="aggilliSpectrumState">AGGILLI MUSIC</span></div></div>
+  <div id="aggilliSpectrumDisplay" class="aggilli-spectrum-wrap" aria-label="Visualizador de espectro de áudio"><canvas id="aggilliSpectrum" aria-hidden="true"></canvas><div class="aggilli-spectrum-caption">SPECTRUM ANALYZER <span id="aggilliSpectrumState">AGGILLI MUSIC</span></div></div>
+  </div>
   <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Posição da música">
   <div class="music-controls">
    <button id="shuffleBtn" onclick="toggleShuffle()" title="Aleatório" aria-label="Aleatório">⤨</button>
@@ -226,6 +292,16 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
     </div>
     <small id="aggilliEqStatus" role="status">O equalizador é ativado ao reproduzir áudio.</small>
   </div>
+</div>
+<div class="receiver-tools">
+  <label for="aggilliSleep">Temporizador</label>
+  <select id="aggilliSleep">
+    <option value="0">Desligado</option>
+    <option value="15">15 min</option><option value="30">30 min</option>
+    <option value="60">60 min</option><option value="90">90 min</option>
+  </select>
+  <output id="aggilliSleepStatus" for="aggilliSleep" aria-live="off"></output>
+  <button type="button" id="aggilliDisplayToggle" aria-controls="aggilliSpectrumDisplay" aria-pressed="true">Espectro</button>
 </div>
 
 <video id="cloudVideo" controls playsinline preload="metadata" hidden style="display:none;width:100%;max-height:340px;margin-top:12px;border-radius:10px;background:#000"></video>
@@ -280,7 +356,7 @@ main{max-width:960px;margin:22px auto;padding:14px;background:#11161d;border-rad
 
 
 <!-- AGGILLI_NEXTCLOUD_SYNC_BUTTON_V1 -->
-<section style="margin:14px 0;padding:14px;border:1px solid #365147;border-radius:10px;background:#111e19;color:#d8f7e1">
+<section id="aggilliSyncCloudPanel" style="margin:14px 0;padding:14px;border:1px solid #365147;border-radius:10px;background:#111e19;color:#d8f7e1">
  <button type="button" id="aggilliSyncCloud" style="padding:11px 16px;border-radius:8px;background:#4ade80;color:#07150c;border:0;font-weight:700;cursor:pointer">☁ Sincronizar Nextcloud → AzuraCast</button>
  <span id="aggilliSyncCloudStatus" role="status" aria-live="polite" style="display:block;margin-top:8px;font-size:12px;color:#aebdb7">Requer autenticação administrativa.</span>
 </section>
@@ -811,7 +887,7 @@ fetch('catalogo.json',{cache:'no-store'})
        const slot=w/count,barW=Math.max(2*dpr,slot-2*dpr);
        const maxH=h-36*dpr;
        const gradient=ctx.createLinearGradient(0,h,0,h-maxH);
-       gradient.addColorStop(0,'#176f43');gradient.addColorStop(.5,'#4ade80');gradient.addColorStop(1,'#b6ffd0');
+       gradient.addColorStop(0,'#254a54');gradient.addColorStop(.5,'#71b8c8');gradient.addColorStop(1,'#dcf5f7');
        ctx.fillStyle=gradient;
        for(let i=0;i<count;i++){
          // Escala não linear para dar mais espaço às frequências graves.
@@ -957,6 +1033,41 @@ fetch('catalogo.json',{cache:'no-store'})
 })();
 </script>
 
+<script>
+/* Receiver display and sleep timer */
+(() => {
+ const display=document.getElementById('aggilliSpectrumDisplay');
+ const displayToggle=document.getElementById('aggilliDisplayToggle');
+ const sleep=document.getElementById('aggilliSleep');
+ const status=document.getElementById('aggilliSleepStatus');
+ let deadline=0;
+ let interval;
+ displayToggle.addEventListener('click',()=>{
+  display.hidden=!display.hidden;
+  displayToggle.setAttribute('aria-pressed',String(!display.hidden));
+ });
+ function updateTimer(){
+  const remaining=Math.ceil((deadline-Date.now())/1000);
+  if(remaining>0){
+   status.value=formatTime(remaining);
+   return;
+  }
+  clearInterval(interval);
+  if(playbackMode==='radio')stopAudio();
+  else pauseAudio();
+  sleep.value='0';
+  status.value='Reprodução interrompida';
+ }
+ sleep.addEventListener('change',()=>{
+  clearInterval(interval);
+  const minutes=Number(sleep.value);
+  if(!minutes){status.value='';return}
+  deadline=Date.now()+minutes*60000;
+  interval=setInterval(updateTimer,1000);
+  updateTimer();
+ });
+})();
+</script>
 <script>
 /* AGGILLI_NEXTCLOUD_SYNC_BUTTON_V1 */
 (() => {
