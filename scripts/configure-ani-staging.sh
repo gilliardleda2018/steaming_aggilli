@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Assistente para ligar a DJ ANI na API comercial em homologação.
-#   sudo bash scripts/configure-ani-staging.sh gemini   (vai direto ao Gemini)
+#   sudo bash scripts/configure-ani-staging.sh gemini [modelo]   (vai direto ao Gemini)
 #   sudo bash scripts/configure-ani-staging.sh   (ou, como root, sem sudo)
 # 1 = Google Gemini (plano gratuito, endpoint compatível com OpenAI)
 # 2 = Claude (Anthropic, SDK oficial; exige créditos)
@@ -60,7 +60,9 @@ PY
   ) || exit 2
   old_model=$(current AGGILLI_ANI_MODEL)
   [[ $old_provider == openai-compatible && -n $old_model ]] || old_model=$suggested
-  read -r -p "Modelo [Enter usa ${old_model:-nenhum encontrado}]: " model
+  if [[ -n ${2:-} ]]; then model=$2; echo "Modelo: $model"; else
+    read -r -p "Modelo [Enter usa ${old_model:-nenhum encontrado}]: " model
+  fi
   model=${model:-$old_model}
   url=$gemini_url
 elif [[ $choice == 2 ]]; then
@@ -73,7 +75,9 @@ elif [[ $choice == 2 ]]; then
     { echo 'A chave deve começar com sk-ant- e não ter espaços.' >&2; exit 2; }
   old_model=$(current AGGILLI_ANI_MODEL)
   [[ $old_provider == anthropic && -n $old_model ]] || old_model=$claude_model
-  read -r -p "Modelo [Enter usa $old_model]: " model
+  if [[ -n ${2:-} ]]; then model=$2; echo "Modelo: $model"; else
+    read -r -p "Modelo [Enter usa $old_model]: " model
+  fi
   model=${model:-$old_model}
   url=$(current AGGILLI_ANI_CHAT_URL)
 else
