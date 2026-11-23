@@ -238,12 +238,19 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
 .winamp-row:hover,.winamp-row.active{background:#263e43!important}
 .list-head{background:#303a3d;color:#d2dddd}
 .library-views{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 9px}
-.library-views button,.favorite-track{background:var(--switch);color:#edf5f6;border:1px solid #566367;border-radius:3px}
+.library-views button,.favorite-track,.playlist-controls button,.playlist-track{background:var(--switch);color:#edf5f6;border:1px solid #566367;border-radius:3px}
 .library-views button{padding:7px 11px;font-size:12px}
 .library-views button[aria-pressed="true"]{background:#315358;border-color:#8ec7ce}
-.list-head,.winamp-row,.winamp-row:nth-child(even){grid-template-columns:40px minmax(0,1fr) 58px 32px}
-.favorite-track{padding:3px;min-height:29px;font-size:17px;line-height:1}
+.list-head,.winamp-row,.winamp-row:nth-child(even){grid-template-columns:40px minmax(0,1fr) 58px 65px}
+.track-actions{display:flex;justify-content:flex-end;gap:3px}
+.favorite-track,.playlist-track{width:30px;padding:3px;min-height:29px;font-size:17px;line-height:1}
 .favorite-track[aria-pressed="true"]{color:#f4cf85}
+.playlist-controls{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:0 0 10px;font-size:12px}
+.playlist-controls form{display:flex;flex:1 1 210px;gap:5px}
+.playlist-controls select,.playlist-controls input{width:auto;min-width:0;max-width:100%;margin:0;padding:6px 8px;border:1px solid #566367;border-radius:3px;background:#20292c}
+.playlist-controls input{flex:1}
+.playlist-controls button{padding:6px 9px}
+.playlist-controls output{flex-basis:100%;color:#b5d5db}
 .library-empty{padding:15px;color:#c3cbcd;font-size:13px}
 #aggilliDjPanel,#aggilliQueuePanel,#aggilliSyncCloudPanel,#aggilliUploadPanel{
  background:var(--glass)!important;border:1px solid #576365!important;border-top:5px solid #abb2b1!important;border-radius:3px!important;
@@ -253,7 +260,7 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
  main{margin:0;padding:8px;border-radius:0}
  .player{padding:11px}.app-head{padding:10px}.app-head strong{font-size:15px}
  .music-controls button{min-width:34px;padding:6px}
- .list-head,.winamp-row,.winamp-row:nth-child(even){grid-template-columns:25px minmax(0,1fr) 44px 30px}
+ .list-head,.winamp-row,.winamp-row:nth-child(even){grid-template-columns:25px minmax(0,1fr) 44px 65px}
  .receiver-tools #aggilliDisplayToggle{margin-left:0}
 }
 </style>
@@ -363,9 +370,19 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
   <button type="button" data-view="all" aria-pressed="true">Todas</button>
   <button type="button" data-view="favorites" aria-pressed="false">Favoritas</button>
   <button type="button" data-view="recent" aria-pressed="false">Recentes</button>
+  <button type="button" data-view="playlist" aria-pressed="false">Playlists</button>
+ </div>
+ <div class="playlist-controls">
+  <label for="activePlaylist">Playlist ativa</label>
+  <select id="activePlaylist"><option value="">Selecione</option></select>
+  <form id="playlistForm">
+   <input id="playlistName" aria-label="Nome da nova playlist" placeholder="Nome da nova playlist" maxlength="60" required>
+   <button type="submit">Criar</button>
+  </form>
+  <output id="playlistStatus" aria-live="polite"></output>
  </div>
  <input id="search" placeholder="Pesquisar artista ou música..." aria-label="Pesquisar artista ou música" oninput="render()">
- <div class="list-head"><span>#</span><span>ARTISTA — TÍTULO</span><span style="text-align:right">TEMPO</span><span aria-label="Favorita">★</span></div>
+ <div class="list-head"><span>#</span><span>ARTISTA — TÍTULO</span><span style="text-align:right">TEMPO</span><span style="text-align:right">AÇÕES</span></div>
  <div id="library"></div>
 
 
@@ -513,6 +530,43 @@ function saveTrackIds(key,values){
 }
 const favorites=new Set(readTrackIds(favoritesKey));
 let recentIds=readTrackIds(recentKey).slice(0,50);
+const playlistsKey='aggilli-library-playlists-v1';
+const activePlaylist=document.getElementById('activePlaylist');
+const playlistForm=document.getElementById('playlistForm');
+const playlistName=document.getElementById('playlistName');
+const playlistStatus=document.getElementById('playlistStatus');
+const playlists=new Map();
+try{
+ const saved=JSON.parse(localStorage.getItem(playlistsKey)||'[]');
+ for(const entry of Array.isArray(saved)?saved:[]){
+  if(Array.isArray(entry)&&typeof entry[0]==='string'&&entry[0]&&Array.isArray(entry[1]))
+   playlists.set(entry[0],new Set(entry[1].filter(id=>typeof id==='string')));
+ }
+}catch(_){}
+function addPlaylistOption(name){
+ const option=document.createElement('option');
+ option.value=name;
+ option.textContent=name;
+ activePlaylist.append(option);
+}
+function savePlaylists(){
+ try{localStorage.setItem(playlistsKey,JSON.stringify([...playlists].map(([name,ids])=>[name,[...ids]])));return true}
+ catch(_){playlistStatus.value='O navegador não permitiu salvar a playlist.';return false}
+}
+for(const name of playlists.keys())addPlaylistOption(name);
+activePlaylist.addEventListener('change',()=>{playlistStatus.value='';render();});
+playlistForm.addEventListener('submit',event=>{
+ event.preventDefault();
+ const name=playlistName.value.trim();
+ if(!name)return;
+ if(playlists.has(name)){playlistStatus.value='Já existe uma playlist com esse nome.';return}
+ playlists.set(name,new Set());
+ addPlaylistOption(name);
+ activePlaylist.value=name;
+ playlistName.value='';
+ if(savePlaylists())playlistStatus.value='Playlist criada. Use + nas faixas para adicioná-las.';
+ render();
+});
 libraryViews.querySelectorAll('[data-view]').forEach(button=>{
  button.addEventListener('click',()=>{
   libraryView=button.dataset.view;
@@ -704,15 +758,17 @@ function refreshNow(){
 function render(){
  const q=document.getElementById('search').value.toLocaleLowerCase('pt-BR');
  const box=document.getElementById('library');box.replaceChildren();
- const filtered=tracks.filter(t=>{
+ const playlist=playlists.get(activePlaylist.value);
+ let filtered=tracks.filter(t=>{
   const m=t.media||{};const parts=trackArtistTitle(t);
   const searchText=[parts.artist,parts.title,m.text||''].join(' ').toLocaleLowerCase('pt-BR');
   return (libraryView!=='favorites'||favorites.has(t.track_id)) &&
    (selectedGenre==='Todos'||(genres[t.track_id]||'Outros')===selectedGenre)&&searchText.includes(q);
  });
- if(libraryView==='recent'){
+ if(libraryView==='recent'||libraryView==='playlist'){
   const matches=new Map(filtered.map(t=>[t.track_id,t]));
-  filtered.splice(0,filtered.length,...recentIds.map(id=>matches.get(id)).filter(Boolean));
+  const ids=libraryView==='recent'?recentIds:[...(playlist||[])];
+  filtered=ids.map(id=>matches.get(id)).filter(Boolean);
  }
  if(!aggilliDjQueueActive)playQueue=filtered.map(t=>t.track_id);
  document.getElementById('status').textContent=filtered.length+' músicas';
@@ -721,7 +777,8 @@ function render(){
   empty.className='library-empty';
   empty.textContent=q||selectedGenre!=='Todos'?'Nenhuma faixa para os filtros atuais.':
    libraryView==='favorites'?'Marque uma faixa com a estrela para salvá-la aqui.':
-   libraryView==='recent'?'As faixas que você ouvir aparecerão aqui.':'Nenhuma faixa na biblioteca.';
+   libraryView==='recent'?'As faixas que você ouvir aparecerão aqui.':
+   libraryView==='playlist'?(playlist?'Playlist vazia. Abra Todas para adicionar faixas.':'Selecione ou crie uma playlist.'):'Nenhuma faixa na biblioteca.';
   box.append(empty);
  }
  filtered.forEach((t,i)=>{
@@ -760,7 +817,30 @@ function render(){
     libraryViews.querySelector('[data-view="favorites"]').focus();
    }else updateFavorite();
   });
-  row.append(num,info,duration,favorite);
+  const actions=document.createElement('div');
+  actions.className='track-actions';
+  actions.append(favorite);
+  if(playlist){
+   const playlistButton=document.createElement('button');
+   playlistButton.type='button';
+   playlistButton.className='playlist-track';
+   const updatePlaylistButton=()=>{
+    const added=playlist.has(t.track_id);
+    playlistButton.textContent=added?'−':'+';
+    playlistButton.setAttribute('aria-label',(added?'Remover ':'Adicionar ')+parts.title+(added?' de ':' em ')+activePlaylist.value);
+   };
+   updatePlaylistButton();
+   playlistButton.addEventListener('click',event=>{
+    event.stopPropagation();
+    const removed=playlist.delete(t.track_id);
+    if(!removed)playlist.add(t.track_id);
+    if(savePlaylists())playlistStatus.value=removed?'Faixa removida da playlist.':'Faixa adicionada à playlist.';
+    if(removed&&libraryView==='playlist'){render();activePlaylist.focus()}
+    else updatePlaylistButton();
+   });
+   actions.append(playlistButton);
+  }
+  row.append(num,info,duration,actions);
   row.addEventListener('pointerenter',()=>preauthorizeTrack(t),{once:true});
   row.addEventListener('focusin',()=>preauthorizeTrack(t),{once:true});
   row.onclick=()=>playTrack(t);
