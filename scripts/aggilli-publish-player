@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Publica no Apache o player de um commit já enviado à branch de trabalho.
+# Instalado como root em /usr/local/sbin e liberado no sudoers só para este caminho.
+# O publicador executado é a cópia fixa de /usr/local/lib/aggilli; do commit
+# escolhido saem apenas player/index.html e o logo, nunca código executável.
+set -Eeuo pipefail
+umask 022
+
+readonly repo_url=https://github.com/gilliardleda2018/steaming_aggilli.git
+readonly branch=feat/nextcloud-webdav-sync
+readonly repo=/opt/aggilli-deploy/steaming_aggilli
+readonly publisher=/usr/local/lib/aggilli/publish-player.sh
+
+revision=${1:-}
+if [[ ! $revision =~ ^[0-9a-f]{7,40}$ ]]; then
+  echo 'Uso: aggilli-publish-player <hash do commit>' >&2
+  exit 2
+fi
+if (( EUID != 0 )); then
+  echo 'Execute com sudo.' >&2
+  exit 1
+fi
+
+if [[ ! -d $repo/.git ]]; then
+  install -d -m 0755 "$(dirname "$repo")"
+  git clone --quiet --branch "$branch" "$repo_url" "$repo"
+fi
+cd "$repo"
+git fetch --quiet origin "$branch"
+
+commit=$(git rev-parse --verify --quiet "$revision^{commit}") ||
+  { echo "Commit $revision não encontrado em origin/$branch." >&2; exit 3; }
+git merge-base --is-ancestor "$commit" "origin/$branch" ||
+  { echo "Commit $commit não pertence a origin/$branch." >&2; exit 3; }
+
+printf 'Publicando %s de origin/%s\n' "$commit" "$branch"
+exec "$publisher" "$commit"
