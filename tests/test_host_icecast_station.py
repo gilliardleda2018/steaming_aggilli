@@ -100,6 +100,12 @@ class HostIcecastStationTests(unittest.TestCase):
         self.assertLess(text.index("reverse_proxy /novaesperanca"), text.index("reverse_proxy 127.0.0.1:8080"))
         self.assertIn("flush_interval -1", text)
 
+    def test_listeners_go_through_the_tailscale_funnel(self):
+        self.assertIn('ProxyPass "http://127.0.0.1:8000/$mount" flushpackets=on', SCRIPT)
+        self.assertIn('a2enconf -q "aggilli-hosted-$mount"', SCRIPT)
+        self.assertIn("apache2ctl configtest", SCRIPT)
+        self.assertIn("https://$funnel_host$MOUNT", SCRIPT)
+
     def test_script_backs_up_and_restores(self):
         self.assertIn('cp -p "$icecast_conf" "$backups/icecast.xml-$stamp"', SCRIPT)
         self.assertIn("trap restore ERR", SCRIPT)

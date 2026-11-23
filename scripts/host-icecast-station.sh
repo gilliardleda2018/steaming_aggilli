@@ -18,6 +18,7 @@ readonly icecast_conf=/etc/icecast2/icecast.xml
 readonly caddyfile=/etc/caddy/Caddyfile
 readonly public_host=radio.aggillintelligence.com.br
 readonly lan_ip=172.16.100.13
+readonly funnel_host=server.taila400aa.ts.net
 readonly state_dir=/etc/aggilli-music/hosted-stations
 readonly admin_env=/etc/aggilli-music/icecast-admin.env
 readonly backups=/var/backups/aggilli-music
@@ -37,6 +38,10 @@ restore() {
   echo "Falhou; restaurando as cópias de $stamp." >&2
   cp -p "$backups/icecast.xml-$stamp" "$icecast_conf"
   cp -p "$backups/Caddyfile-$stamp" "$caddyfile"
+  if [[ -n ${apache_conf:-} && ! -f $backups/apache-$mount-$stamp.conf ]]; then
+    a2disconf -q "aggilli-hosted-$mount" 2>/dev/null || true; rm -f "$apache_conf"
+  elif [[ -n ${apache_conf:-} ]]; then cp -p "$backups/apache-$mount-$stamp.conf" "$apache_conf"; fi
+  systemctl reload apache2 || true
   systemctl restart icecast2 || true
   systemctl reload caddy || true
 }
@@ -129,11 +134,29 @@ open(path, "w", encoding="utf-8").write(text[:start] + block + text[end:])
 PY
 caddy validate --config "$caddyfile" --adapter caddyfile >/dev/null
 
+# Caminho principal dos ouvintes: o Tailscale Funnel publica https://server.taila400aa.ts.net
+# na internet (IPv4 e IPv6) e entrega ao Apache 8100, como o player e a /radio.mp3.
+apache_conf=/etc/apache2/conf-available/aggilli-hosted-$mount.conf
+[[ -f $apache_conf ]] && cp -p "$apache_conf" "$backups/apache-$mount-$stamp.conf"
+cat > "$apache_conf" <<EOF
+# Rádio hospedada no Icecast próprio: ouvintes em https://$funnel_host/$mount (via Funnel).
+<Location "/$mount">
+    ProxyPass "http://127.0.0.1:8000/$mount" flushpackets=on
+    ProxyPassReverse "http://127.0.0.1:8000/$mount"
+</Location>
+EOF
+chmod 0644 "$apache_conf"
+a2enconf -q "aggilli-hosted-$mount"
+apache2ctl configtest 2>/dev/null
+
 systemctl restart icecast2
 systemctl reload caddy
+systemctl reload apache2
 sleep 2
 curl -fsS -m 5 http://127.0.0.1:8000/status-json.xsl >/dev/null
 curl -fsS -m 5 -o /dev/null https://$public_host/ 2>/dev/null || curl -fsS -m 5 -o /dev/null --resolve "$public_host:443:$lan_ip" "https://$public_host/"
+# Sem fonte conectada o Icecast responde 404 no ponto; o que importa é a rota chegar até ele.
+[[ $(curl -s -m 5 -o /dev/null -w '%{http_code}' "http://127.0.0.1:8100/$mount") =~ ^(200|404)$ ]]
 trap - ERR
 
 MOUNT=$(sed -n 's/^MOUNT=//p' "$station_env")
@@ -145,13 +168,15 @@ Cópias de segurança: $backups/*-$stamp
 
 Dados para o Oddcast da rádio (só no computador deles):
   Server Type : Icecast
-  Server IP   : $public_host
+  Server IP   : $funnel_host  (computador da rádio no Tailscale)
+                ou $public_host (se o roteador encaminhar a 8000)
   Server Port : 8000
   Mount point : $MOUNT
   Password    : $PASSWORD
   Encoder     : MP3, 96 kbps, 44100 Hz, estéreo (como já usam)
 
-Endereço para os ouvintes: https://$public_host$MOUNT
+Endereço para os ouvintes: https://$funnel_host$MOUNT
+                           (também https://$public_host$MOUNT por IPv6)
 Não cole a senha em conversas; para trocar: rode de novo com --rotate.
 EOF
 if [[ -f $admin_env ]]; then echo "Senhas de administração do Icecast: $admin_env (root, 0600)."; fi
