@@ -454,7 +454,7 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
  </div>
  <label for="aggilliDjPrompt" style="display:block;margin:12px 0 5px;font-size:12px">Como você quer ouvir música hoje?</label>
  <div style="display:flex;gap:8px;flex-wrap:wrap">
-  <input id="aggilliDjPrompt" maxlength="250" placeholder="Ex.: músicas calmas para trabalhar" style="flex:1;min-width:180px;margin:0;border-radius:8px" />
+  <input id="aggilliDjPrompt" maxlength="250" placeholder="Ex.: 30 minutos de rock progressivo sem repetir" style="flex:1;min-width:180px;margin:0;border-radius:8px" />
   <button type="button" id="aggilliDjGenerate" style="border-radius:8px">Criar seleção</button>
   <button type="button" id="aggilliDjInterpret" style="border-radius:8px">Pedir à ANI</button>
  </div>
@@ -864,10 +864,11 @@ function formatTime(seconds){
  if(!Number.isFinite(seconds)||seconds<0)return '--:--';
  const n=Math.floor(seconds);return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
 }
+let catalogDurations={};
 function trackSeconds(t){
  const m=t.media||{};
- const value=Number(m.length??m.duration??t.length??t.duration);
- return Number.isFinite(value)&&value>0?value:null;
+ return [catalogDurations[t.track_id],m.length,m.duration,t.length,t.duration]
+  .map(Number).find(value=>Number.isFinite(value)&&value>0)??null;
 }
 function trackArtistTitle(t){
  const m=t.media||{};let artist=(m.artist||'').trim();let title=(m.title||m.text||'Sem título').trim();
@@ -1044,6 +1045,7 @@ fetch('catalogo.json',{cache:'no-store'})
     if (!resposta.ok) throw new Error(resposta.status);
 
     const duracoes = await resposta.json();
+    if(duracoes&&typeof duracoes==='object'&&!Array.isArray(duracoes))catalogDurations=duracoes;
 
     function formatar(segundos) {
       const s = Math.round(Number(segundos));
@@ -1768,14 +1770,28 @@ fetch('catalogo.json',{cache:'no-store'})
  }
  function create(mood, title=labels[mood], note=''){
   if(typeof tracks==='undefined'||!Array.isArray(tracks)||!tracks.length){status.textContent='Aguarde a biblioteca carregar.';return;}
+  results.replaceChildren();
+  const request=norm(prompt.value);
+  const requestedMinutes=request.match(/\b(\d{1,4})\s*(?:minutos?|min)\b/);
+  const minutes=requestedMinutes?Number(requestedMinutes[1]):null;
+  if(minutes!==null&&(minutes<5||minutes>180)){
+   status.textContent='Peça uma seleção de 5 a 180 minutos.';
+   return;
+  }
+  const wantedGenre=[...genreNames].filter(name=>name!=='Todos')
+   .sort((a,b)=>b.length-a.length)
+   .find(name=>(' '+request.replace(/[^a-z0-9]+/g,' ')+' ').includes(' '+norm(name)+' '));
+  const skipRecent=/\b(?:sem repet\w*|nao repet\w*|evit\w+ repet\w*)\b/.test(request);
   const words=moods[mood]||[];
   const recent=new Set(recentIds.slice(0,12));
+  const history=new Set(skipRecent?recentIds:[]);
   const personalized=mood==='personalizada';
   const genreOf=track=>norm(genres[track.track_id]||track.media.genre);
   const likedGenres=new Set(personalized
    ? tracks.filter(track=>track?.media&&favorites.has(track.track_id)).map(genreOf).filter(g=>g&&g!=='outros')
    : []);
-  const ranked=tracks.filter(t=>t&&t.track_id&&t.download_url&&t.media).map(t=>{
+  const candidates=tracks.filter(t=>t&&t.track_id&&t.download_url&&t.media&&!history.has(t.track_id)
+   &&(!wantedGenre||genreOf(t)===norm(wantedGenre))).map(t=>{
    const m=t.media||{};
    const genre=genreOf(t);
    const meta=norm([m.title,m.text,m.artist,m.genre,genre].join(' '));
@@ -1783,12 +1799,33 @@ fetch('catalogo.json',{cache:'no-store'})
    const favorite=personalized&&favorites.has(t.track_id);
    const similar=likedGenres.has(genre);
    const reason=matches.length?'Combina com '+labels[mood]+': '+matches.join(', '):
-    favorite?'Uma das suas favoritas':similar?'Gênero presente nas suas favoritas':'Descoberta da biblioteca';
+    favorite?'Uma das suas favoritas':similar?'Gênero presente nas suas favoritas':
+    wantedGenre?'Gênero pedido: '+wantedGenre:'Descoberta da biblioteca';
    return {t,score:matches.length*3+(favorite?4:similar?3:0)-(recent.has(t.track_id)?2:0),reason};
-  }).sort((a,b)=>b.score-a.score||String(a.t.track_id).localeCompare(String(b.t.track_id))).slice(0,12);
-  results.replaceChildren();
-  if(!ranked.length){status.textContent='Nenhuma faixa disponível para esta seleção.';return;}
+  }).sort((a,b)=>b.score-a.score||String(a.t.track_id).localeCompare(String(b.t.track_id)));
+  const ranked=[];
+  const included=new Set();
+  let seconds=0;
+  for(const item of candidates){
+   if(included.has(item.t.track_id))continue;
+   const duration=trackSeconds(item.t);
+   if(minutes!==null&&(duration===null||seconds+duration>minutes*60))continue;
+   ranked.push(item);
+   included.add(item.t.track_id);
+   seconds+=duration||0;
+   if(minutes===null&&ranked.length===12)break;
+  }
+  if(!ranked.length){
+   status.textContent='Nenhuma faixa atende a este pedido.'+
+    (minutes!==null?' Sessões por tempo usam faixas com duração conhecida.':'');
+   return;
+  }
+  const details=[];
+  if(wantedGenre)details.push(wantedGenre);
+  if(minutes!==null)details.push(formatTime(seconds)+' de '+minutes+' min');
+  if(skipRecent)details.push('sem faixas do histórico recente');
   status.textContent=ranked.length+' músicas · '+title+
+   (details.length?' · '+details.join(' · '):'')+
    (personalized&&!favorites.size?' · marque faixas como favoritas para personalizar a seleção.':'.')+note;
   const controls=document.createElement('div');controls.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin:10px 0';
   const start=document.createElement('button');start.type='button';start.textContent='Ouvir seleção';start.style.borderRadius='8px';
