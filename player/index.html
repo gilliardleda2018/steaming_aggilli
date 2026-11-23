@@ -335,7 +335,7 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
 </head>
 <body>
 <main>
- <div class="app-head"><img class="app-logo" src="aggilli-music-logo.jpg?v=b25dabf" alt="Logomarca oficial Aggilli Music" width="72" height="72"><div><strong>AGGILLI MUSIC</strong><small><span id="playerRelease">v1.1.0</span> · <span id="totalTracks">36</span> FAIXAS</small></div></div>
+ <div class="app-head"><img class="app-logo" src="aggilli-music-logo.jpg?v=b25dabf" alt="Logomarca oficial Aggilli Music" width="72" height="72"><div><strong>AGGILLI MUSIC</strong><small><span id="playerRelease">v1.1.1</span> · <span id="totalTracks">36</span> FAIXAS</small></div></div>
  <section class="player" aria-label="Reprodutor de música">
   <div class="receiver-display">
   <div class="now-label">REPRODUZINDO AGORA</div>
@@ -1545,7 +1545,32 @@ fetch('catalogo.json',{cache:'no-store'})
   }else finish('Comando não reconhecido.');
  }
  let recognition;
+ // No APK, o reconhecimento de fala vem da ponte nativa AggilliVoice.
+ const nativeVoice=window.AggilliVoice;
+ let nativeListening=false;
+ const nativeErrors={
+  denied:'Permita o microfone para o Aggilli Music nas configurações do Android.',
+  unavailable:'Reconhecimento de voz indisponível neste aparelho. Digite o comando.',
+  nomatch:'Nenhum comando captado.'
+ };
+ if(nativeVoice)nativeVoice.onmessage=event=>{
+  if(!nativeListening)return;
+  let data;
+  try{data=JSON.parse(event.data)}catch(_){return}
+  nativeListening=false;
+  mic.setAttribute('aria-pressed','false');
+  if(data?.type==='result'&&typeof data.text==='string'){
+   input.value=data.text.trim().slice(0,100);
+   execute(input.value);
+  }else status.value=nativeErrors[data?.reason]||'Não foi possível ouvir. Tente novamente ou digite o comando.';
+ };
  function cancel(){
+  if(nativeListening){
+   nativeListening=false;
+   mic.setAttribute('aria-pressed','false');
+   nativeVoice.postMessage('cancel');
+   return;
+  }
   if(!recognition)return;
   const current=recognition;
   recognition=undefined;
@@ -1564,7 +1589,14 @@ fetch('catalogo.json',{cache:'no-store'})
   execute(input.value.trim());
  });
  mic.addEventListener('click',()=>{
-  if(recognition){cancel();status.value='Escuta cancelada.';return;}
+  if(recognition||nativeListening){cancel();status.value='Escuta cancelada.';return;}
+  if(nativeVoice){
+   nativeListening=true;
+   mic.setAttribute('aria-pressed','true');
+   status.value='Ouvindo…';
+   nativeVoice.postMessage('start');
+   return;
+  }
   if(!Recognition){status.value='Microfone indisponível neste navegador. Digite o comando.';return;}
   const current=new Recognition();
   recognition=current;
@@ -1590,7 +1622,7 @@ fetch('catalogo.json',{cache:'no-store'})
   try{current.start();}
   catch(_){recognition=undefined;mic.setAttribute('aria-pressed','false');status.value='Não foi possível abrir o microfone. Digite o comando.';}
  });
- document.addEventListener('visibilitychange',()=>{if(document.hidden&&recognition){cancel();status.value='Escuta cancelada.';}});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&(recognition||nativeListening)){cancel();status.value='Escuta cancelada.';}});
 })();
 </script>
 <script>
