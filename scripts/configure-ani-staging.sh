@@ -65,6 +65,11 @@ if result["engine"] == "ani":
 else:
     try:
         claude_intent(prompt, model=os.environ["AGGILLI_ANI_MODEL"])
+    except anthropic.BadRequestError as error:
+        # A mensagem da API explica o 400 (ex.: créditos insuficientes) e não contém a chave.
+        key = os.environ.get("ANTHROPIC_API_KEY", "")
+        detail = str(getattr(error, "message", error)).replace(key, "***") if key else str(error)
+        print(f"A Anthropic recusou o pedido (400): {detail[:400]}")
     except anthropic.AuthenticationError:
         print("A Anthropic recusou a chave (401). Confira a chave e rode o assistente de novo.")
     except anthropic.PermissionDeniedError:
