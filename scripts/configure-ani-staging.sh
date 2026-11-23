@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Assistente para ligar a DJ ANI na API comercial em homologação.
+#   sudo bash scripts/configure-ani-staging.sh gemini   (vai direto ao Gemini)
 #   sudo bash scripts/configure-ani-staging.sh   (ou, como root, sem sudo)
 # 1 = Google Gemini (plano gratuito, endpoint compatível com OpenAI)
 # 2 = Claude (Anthropic, SDK oficial; exige créditos)
@@ -23,9 +24,16 @@ current() { sed -n "s/^$1=//p" "$env_file" | tail -n 1; }
 
 echo 'DJ ANI (homologação). Ctrl+C cancela sem alterar nada.'
 old_provider=$(current AGGILLI_ANI_PROVIDER)
-default_choice=1; [[ $old_provider == anthropic ]] && default_choice=2
-read -r -p "Provedor: 1 = Google Gemini (grátis), 2 = Claude [Enter usa $default_choice]: " choice
-choice=${choice:-$default_choice}
+# O provedor pode vir como argumento (gemini | claude); sem argumento, pergunta e o padrão é o Gemini.
+case ${1:-} in
+  gemini) choice=1 ;;
+  claude) choice=2 ;;
+  '') read -r -p "Provedor: 1 = Google Gemini (grátis), 2 = Claude [Enter usa 1]: " choice
+      choice=${choice:-1} ;;
+  *) echo 'Uso: configure-ani-staging.sh [gemini|claude]' >&2; exit 2 ;;
+esac
+[[ $choice == 1 ]] && echo 'Provedor: Google Gemini'
+[[ $choice == 2 ]] && echo 'Provedor: Claude'
 
 if [[ $choice == 1 ]]; then
   provider=openai-compatible
