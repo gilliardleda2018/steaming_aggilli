@@ -118,12 +118,24 @@ def media_playlists(media):
 
 
 def index_media(listing):
-    """Map normalized file names to AzuraCast media; names used twice map to None."""
+    """Group AzuraCast media by normalized file name (extension ignored)."""
     index = {}
     for media in listing:
         key = normalized_filename(Path(media.get("path", "")).name)
-        index[key] = None if key in index else media
+        index.setdefault(key, []).append(media)
     return index
+
+
+def pick_media(candidates, output):
+    """Return the single media for ``output``, or None when it cannot be told apart.
+
+    The library may hold the same track as "name.mp3" and "name.mp4"; the MP3
+    whose file name matches exactly is the one the player catalog uses.
+    """
+    if len(candidates) == 1:
+        return candidates[0]
+    exact = [m for m in candidates if Path(m.get("path", "")).name.lower() == output.lower()]
+    return exact[0] if len(exact) == 1 else None
 
 
 def assign_playlists(azura, headers, media_id, playlist_ids=APPROVED_PLAYLISTS, keep=()):
@@ -174,7 +186,7 @@ def main():
             output = name if name.lower().endswith(".mp3") else Path(name).stem + ".mp3"
             key = normalized_filename(output)
             if key in existing:
-                media = existing[key]
+                media = pick_media(existing[key], output)
                 # Already in the library but outside the player playlists: link it
                 # instead of skipping, so it reaches the catalog without re-uploading.
                 if media is None:
@@ -222,7 +234,7 @@ def main():
                         raise RuntimeError("Cannot uniquely identify uploaded media")
                     media_id = matches[0].get("id")
                 assign_playlists(azura, headers, media_id)
-                existing[key] = {"id": media_id, "playlists": [{"id": i} for i in APPROVED_PLAYLISTS]}
+                existing[key] = [{"id": media_id, "path": output, "playlists": [{"id": i} for i in APPROVED_PLAYLISTS]}]
                 imported += 1
                 state[name] = {"etag": etag, "azuracast_filename": output}
                 temp = STATE_FILE.with_suffix(".tmp")

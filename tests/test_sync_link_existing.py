@@ -96,6 +96,18 @@ class LinkExistingMediaTests(unittest.TestCase):
         azura = self.run_sync(media, [("Tangled Hearts.mp4", 10, "e4")])
         self.assertEqual(azura.puts, [])
 
+    def test_mp3_is_chosen_when_library_also_has_the_mp4(self):
+        media = [{"id": 25, "path": "010_Round Again.mp3", "playlists": []},
+                 {"id": 3, "path": "010_Round Again.mp4", "playlists": []}]
+        azura = self.run_sync(media, [("010_Round Again.mp4", 10, "e5")])
+        self.assertEqual(azura.puts, [(25, [1, 2])])
+
+    def test_mp3_in_one_playlist_gets_the_other(self):
+        media = [{"id": 22, "path": "006_The Signal Watching Me.mp3", "playlists": [2]},
+                 {"id": 30, "path": "006_The Signal Watching Me.mp4", "playlists": [2]}]
+        azura = self.run_sync(media, [("006_The Signal Watching Me.mp4", 10, "e6")])
+        self.assertEqual(azura.puts, [(22, [1, 2])])
+
     def test_links_count_toward_the_limit(self):
         media = [{"id": i, "path": f"faixa {i}.mp3", "playlists": []} for i in (1, 2, 3)]
         remote = [(f"faixa {i}.m4a", 10, f"e{i}") for i in (1, 2, 3)]
