@@ -37,6 +37,29 @@ MAX_BYTES = 2 * 1024**3
 DAV = "{DAV:}"
 
 
+SOURCE_EXTENSIONS = {".mp3", ".mp4", ".m4a", ".webm"}
+# yt-dlp leaves per-stream fragments ("name.f251.webm") and unfinished merges
+# ("name.temp.mp4") next to the final file; importing them creates duplicates.
+PARTIAL_NAME = re.compile(r"\.(?:f\d+|temp)\.[a-z0-9]+$", re.IGNORECASE)
+
+
+def importable(name):
+    if not name or "/" in name or "\\" in name or name.startswith("."):
+        return False
+    if PARTIAL_NAME.search(name):
+        return False
+    return Path(name).suffix.lower() in SOURCE_EXTENSIONS
+
+
+def convert_to_mp3(source, target):
+    """Extract the first audio stream of MP4, M4A or WebM as 192 kbps MP3."""
+    subprocess.run(
+        ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", str(source),
+         "-map", "0:a:0", "-vn", "-codec:a", "libmp3lame", "-b:a", "192k", str(target)],
+        check=True, timeout=3600,
+    )
+
+
 def list_remote(client):
     xml = b'<d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/><d:getcontentlength/><d:getetag/></d:prop></d:propfind>'
     response = client.request("PROPFIND", DAV_URL, headers={"Depth": "1", "Content-Type": "application/xml"}, content=xml)
@@ -57,7 +80,7 @@ def list_remote(client):
         props = item.find(f".//{DAV}prop")
         if not props or props.find(f"{DAV}resourcetype/{DAV}collection") is not None:
             continue
-        if not name or "/" in name or "\\" in name or name.startswith(".") or name.lower().endswith(".temp.mp4") or Path(name).suffix.lower() not in {".mp3", ".mp4"}:
+        if not importable(name):
             continue
         size = props.findtext(f"{DAV}getcontentlength") or ""
         if not size.isdecimal() or int(size) > MAX_BYTES or int(size) == 0:
@@ -136,9 +159,9 @@ def main():
             with tempfile.TemporaryDirectory(prefix="aggilli-sync-") as td:
                 source = Path(td) / name
                 download(cloud, name, size, source)
-                if name.lower().endswith(".mp4"):
+                if not name.lower().endswith(".mp3"):
                     converted = Path(td) / output
-                    subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", str(source), "-map", "0:a:0", "-vn", "-codec:a", "libmp3lame", "-b:a", "192k", str(converted)], check=True, timeout=3600)
+                    convert_to_mp3(source, converted)
                     source = converted
                 if source.stat().st_size > 100 * 1024**2:
                     print(f"SKIP exceeds upload limit: {output}", flush=True)
