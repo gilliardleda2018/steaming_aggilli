@@ -230,6 +230,11 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
 .receiver-tools button,.receiver-tools select{padding:6px 8px;font-size:12px}
 .receiver-tools output{color:#243b3f;font-size:11px;font-variant-numeric:tabular-nums}
 .receiver-tools #aggilliDisplayToggle{margin-left:auto}
+.voice-panel{margin-top:12px;padding:12px;border:1px solid #576365;background:var(--glass);color:#edf6f6}
+.voice-panel form{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.voice-panel label{flex-basis:100%;font-size:12px}
+.voice-panel input{flex:1 1 200px;min-width:0;margin:0}
+.voice-panel output,.voice-panel small{display:block;margin-top:8px;color:#bcd6db}
 .tuner-panel{margin-top:12px;padding:12px;border:1px solid #777f80;background:var(--metal);color:#202829}
 .tuner-scale{display:grid;gap:8px;padding:12px;background:var(--glass);color:#ffd898;font:600 13px ui-monospace,monospace}
 .tuner-scale input{width:100%;margin:0;accent-color:#e7ab57}
@@ -392,7 +397,18 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
   <button type="button" id="aggilliDisplayToggle" aria-controls="aggilliSpectrumDisplay" aria-pressed="true">Espectro</button>
   <button type="button" id="clipToggle" aria-controls="clipPanel" aria-expanded="false">Vídeo</button>
   <button type="button" id="tunerToggle" aria-controls="tunerPanel" aria-expanded="false">Sintonizador</button>
+  <button type="button" id="voiceToggle" aria-controls="voicePanel" aria-expanded="false">Voz</button>
 </div>
+<section id="voicePanel" class="voice-panel" aria-label="Comandos do player" hidden>
+ <form id="voiceForm">
+  <label for="voiceCommand">Comando em português</label>
+  <input id="voiceCommand" type="text" maxlength="100" placeholder="Ex.: volume em 40%" required>
+  <button type="submit">Executar</button>
+  <button id="voiceMic" type="button" aria-pressed="false">MIC</button>
+ </form>
+ <small>Experimente “sintonize Aggilli Radio”, “próxima faixa” ou “desligue em 30 minutos”.</small>
+ <output id="voiceStatus" role="status"></output>
+</section>
 <section id="tunerPanel" class="tuner-panel" aria-label="Sintonizador de rádio" hidden>
  <label class="tuner-scale">Sintonia
   <output id="tunerStation" for="tunerDial">Aggilli Radio</output>
@@ -1433,6 +1449,117 @@ fetch('catalogo.json',{cache:'no-store'})
   store(index,station);
  });
  select(0);
+})();
+</script>
+<script>
+/* Player voice commands */
+(() => {
+ const get=id=>document.getElementById(id);
+ const toggle=get('voiceToggle'), panel=get('voicePanel');
+ const input=get('voiceCommand'), mic=get('voiceMic'), status=get('voiceStatus');
+ const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+ const normalize=text=>text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .replace(/[.!?,]+$/g,'').trim().replace(/\s+/g,' ');
+ const numbers={zero:0,um:1,dois:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,
+  quinze:15,vinte:20,trinta:30,quarenta:40,cinquenta:50,sessenta:60,setenta:70,oitenta:80,noventa:90,cem:100};
+ function amount(value){
+  if(/^\d{1,3}$/.test(value))return Number(value);
+  const parts=value.split(' e ');
+  if(parts.length===1&&Object.hasOwn(numbers,parts[0]))return numbers[parts[0]];
+  if(parts.length===2&&numbers[parts[0]]>=20&&numbers[parts[0]]<=90&&numbers[parts[1]]>=1&&numbers[parts[1]]<=9)
+   return numbers[parts[0]]+numbers[parts[1]];
+  return NaN;
+ }
+ function execute(raw){
+  const command=normalize(raw);
+  const finish=message=>{status.value='“'+raw+'” · '+message;};
+  const volume=command.match(/^volume(?: em| para)?\s+(.+?)(?:\s*%| por cento)?$/);
+  const timer=command.match(/^(?:desligue|pare|temporizador)(?: em)? (.+?) minutos?$/);
+  const station=command.match(/^(?:sintonize|toque a radio) (.+)$/);
+  if(volume){
+   const level=amount(volume[1]);
+   if(!Number.isInteger(level)||level>100){finish('Use um volume de 0 a 100.');return;}
+   const control=get('aggilliVolume');
+   control.value=String(level);control.dispatchEvent(new Event('input',{bubbles:true}));
+   finish('Volume em '+level+'%.');
+  }else if(timer){
+   const minutes=amount(timer[1]);
+   const control=get('aggilliSleep');
+   if(![...control.options].some(option=>Number(option.value)===minutes&&minutes>0)){
+    finish('Escolha 15, 30, 60 ou 90 minutos.');return;
+   }
+   control.value=String(minutes);control.dispatchEvent(new Event('change',{bubbles:true}));
+   finish('Temporizador em '+minutes+' minutos.');
+  }else if(station||command==='radio'){
+   const target=station?.[1]||'aggilli radio';
+   const memory=target.match(/^mem(?:oria)? (.+)$/);
+   const buttons=[...get('tunerMemories').querySelectorAll('button')];
+   const button=memory?buttons[amount(memory[1])]:buttons.find(item=>normalize(item.title)===target);
+   if(!button){finish('Estação não cadastrada.');return;}
+   button.click();
+   const play=get('tunerPlay');
+   if(play.disabled){finish('Essa memória está vazia.');return;}
+   play.click();finish('Sintonizando '+button.title+'.');
+  }else if(/^(pausa|pause|pausar)$/.test(command)){
+   pauseAudio();finish('Reprodução pausada.');
+  }else if(/^(parar|pare)$/.test(command)){
+   stopAudio();finish('Reprodução interrompida.');
+  }else if(/^(reproduzir|continuar|retomar)$/.test(command)){
+   if(!activeMedia().getAttribute('src')){finish('Escolha uma faixa ou estação primeiro.');return;}
+   resumeAudio();finish('Retomando a reprodução.');
+  }else if(/^(proxima|anterior)( faixa)?$/.test(command)){
+   if(playbackMode==='radio'||!playQueue.length){finish('Escolha uma fila de músicas primeiro.');return;}
+   if(command.startsWith('proxima'))nextTrack();else previousTrack();
+   finish('Trocando de faixa.');
+  }else finish('Comando não reconhecido.');
+ }
+ let recognition;
+ function cancel(){
+  if(!recognition)return;
+  const current=recognition;
+  recognition=undefined;
+  mic.setAttribute('aria-pressed','false');
+  current.abort();
+ }
+ toggle.addEventListener('click',()=>{
+  panel.hidden=!panel.hidden;
+  toggle.setAttribute('aria-expanded',String(!panel.hidden));
+  if(panel.hidden){cancel();status.value='';}
+  else input.focus();
+ });
+ get('voiceForm').addEventListener('submit',event=>{
+  event.preventDefault();
+  cancel();
+  execute(input.value.trim());
+ });
+ mic.addEventListener('click',()=>{
+  if(recognition){cancel();status.value='Escuta cancelada.';return;}
+  if(!Recognition){status.value='Microfone indisponível neste navegador. Digite o comando.';return;}
+  const current=new Recognition();
+  recognition=current;
+  current.lang='pt-BR';
+  current.continuous=false;
+  current.interimResults=false;
+  mic.setAttribute('aria-pressed','true');
+  status.value='Ouvindo…';
+  current.onresult=event=>{
+   if(recognition!==current)return;
+   input.value=event.results[0][0].transcript.trim().slice(0,100);
+   execute(input.value);
+  };
+  current.onerror=()=>{
+   if(recognition===current)status.value='Não foi possível ouvir. Tente novamente ou digite o comando.';
+  };
+  current.onend=()=>{
+   if(recognition!==current)return;
+   recognition=undefined;
+   mic.setAttribute('aria-pressed','false');
+   if(status.value==='Ouvindo…')status.value='Nenhum comando captado.';
+  };
+  try{current.start();}
+  catch(_){recognition=undefined;mic.setAttribute('aria-pressed','false');status.value='Não foi possível abrir o microfone. Digite o comando.';}
+ });
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&recognition){cancel();status.value='Escuta cancelada.';}});
 })();
 </script>
 <script>
