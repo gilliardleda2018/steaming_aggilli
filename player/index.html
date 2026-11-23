@@ -1850,20 +1850,23 @@ fetch('catalogo.json',{cache:'no-store'})
   if(/romant|amor/.test(x))return 'romantico';
   return 'descoberta';
  }
- function create(mood, title=labels[mood], note=''){
+ function create(mood, title=labels[mood], note='', hints={}){
   if(typeof tracks==='undefined'||!Array.isArray(tracks)||!tracks.length){status.textContent='Aguarde a biblioteca carregar.';return;}
   results.replaceChildren();
   const request=norm(prompt.value);
+  // O que o ouvinte escreveu explicitamente vale primeiro; as dicas da ANI completam o resto.
   const requestedMinutes=request.match(/\b(\d{1,4})\s*(?:minutos?|min)\b/);
-  const minutes=requestedMinutes?Number(requestedMinutes[1]):null;
+  const hintMinutes=Number.isInteger(hints.minutes)&&hints.minutes>=5&&hints.minutes<=180?hints.minutes:null;
+  const minutes=requestedMinutes?Number(requestedMinutes[1]):hintMinutes;
   if(minutes!==null&&(minutes<5||minutes>180)){
    status.textContent='Peça uma seleção de 5 a 180 minutos.';
    return;
   }
   const wantedGenre=[...genreNames].filter(name=>name!=='Todos')
    .sort((a,b)=>b.length-a.length)
-   .find(name=>(' '+request.replace(/[^a-z0-9]+/g,' ')+' ').includes(' '+norm(name)+' '));
-  const skipRecent=/\b(?:sem repet\w*|nao repet\w*|evit\w+ repet\w*)\b/.test(request);
+   .find(name=>(' '+request.replace(/[^a-z0-9]+/g,' ')+' ').includes(' '+norm(name)+' '))
+   ||genreNames.find(name=>name!=='Todos'&&name!=='Outros'&&name===hints.genre);
+  const skipRecent=/\b(?:sem repet\w*|nao repet\w*|evit\w+ repet\w*)\b/.test(request)||hints.avoidRepeats===true;
   const skipToday=skipRecent&&/\bhoje\b/.test(request);
   const words=moods[mood]||[];
   const recent=new Set(recentIds.slice(0,12));
@@ -1983,7 +1986,8 @@ fetch('catalogo.json',{cache:'no-store'})
    const intent=await response.json();
    if(!Object.hasOwn(moods,intent.mood)||typeof intent.title!=='string')throw Error('Resposta inválida');
    if(stillCurrent()){
-    if(intent.engine==='ani')create(intent.mood,'ANI · '+intent.title.slice(0,100));
+    if(intent.engine==='ani')create(intent.mood,'ANI · '+intent.title.slice(0,100),'',
+     {genre:intent.genre,minutes:intent.minutes,avoidRepeats:intent.avoid_repeats});
     else create(intent.mood,undefined,' Seleção local: modelo indisponível.');
    }
   }catch(_){

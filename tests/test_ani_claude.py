@@ -39,7 +39,8 @@ class ClaudeIntentTests(unittest.TestCase):
     def test_request_uses_structured_output_fallbacks_and_only_the_prompt(self):
         client = FakeClaude(reply(text=json.dumps({"mood": "energia", "title": "Treino a mil"})))
         intent = claude_intent("energia para treinar", model="claude-opus-5-5", client=client)
-        self.assertEqual(intent, {"mood": "energia", "title": "Treino a mil"})
+        self.assertEqual(intent, {"mood": "energia", "title": "Treino a mil", "genre": None,
+                                  "minutes": None, "avoid_repeats": False})
         request = client.requests[0]
         self.assertEqual(request["model"], "claude-opus-5-5")
         self.assertEqual(request["fallbacks"], "default")
@@ -51,13 +52,16 @@ class ClaudeIntentTests(unittest.TestCase):
     def test_schema_only_allows_player_moods(self):
         self.assertEqual(INTENT_SCHEMA["properties"]["mood"]["enum"],
                          ["descoberta", "energia", "foco", "relaxar", "romantico"])
+        self.assertEqual(INTENT_SCHEMA["properties"]["genre"]["enum"][-1], "qualquer")
+        self.assertEqual(set(INTENT_SCHEMA["required"]), {"mood", "title", "genre", "minutes", "avoid_repeats"})
         self.assertFalse(INTENT_SCHEMA["additionalProperties"])
 
     def test_engine_is_ani_when_claude_answers(self):
         client = FakeClaude(reply(text='{"mood": "relaxar", "title": "Noite calma"}'))
         with patch.dict(os.environ, CLAUDE_ENV):
             result = resolve_intent("algo calmo", model_enabled=True, model_client=client)
-        self.assertEqual(result, {"mood": "relaxar", "title": "Noite calma", "engine": "ani"})
+        self.assertEqual(result, {"mood": "relaxar", "title": "Noite calma", "genre": None,
+                                  "minutes": None, "avoid_repeats": False, "engine": "ani"})
 
     def test_refusal_falls_back_to_local_selection(self):
         client = FakeClaude(reply(stop_reason="refusal"))
