@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from commercial.listeners import ListenerStore
 from commercial.registry import RightsRegistry
 from commercial.entitlements import allowed_to_play
-from commercial.ani_dj import build_session
+from commercial.ani_dj import build_session, resolve_intent
 
 app = FastAPI(title="Aggilli Music Commercial Staging", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -200,8 +200,23 @@ def update_subscription(payload: SubscriptionInput):
     return {"success": True}
 
 
-class DjRequest(BaseModel):
+class DjIntentRequest(BaseModel):
     prompt: str = Field(min_length=1, max_length=400)
+
+
+@app.post("/listeners/dj/intent")
+def dj_intent(payload: DjIntentRequest, response: Response, listener=Depends(current_listener)):
+    if not payload.prompt.strip():
+        raise HTTPException(422, "Empty musical request")
+    enforce_limit(listener["id"], "dj-session", 10)
+    response.headers["Cache-Control"] = "private, no-store"
+    return resolve_intent(
+        payload.prompt,
+        model_enabled=os.environ.get("AGGILLI_ANI_ENABLED", "false").lower() == "true",
+    )
+
+
+class DjRequest(DjIntentRequest):
     territory: str = Field(default="BR", min_length=2, max_length=2)
     limit: int = Field(default=10, ge=1, le=50)
 

@@ -86,11 +86,8 @@ def ani_intent(prompt: str, *, endpoint: str, token: str, model: str,
     return parse_model_intent(json.loads(raw))
 
 
-def build_session(prompt: str, tracks: list[dict], rights_by_id: Mapping,
-                  territory: str, *, limit: int = 10,
-                  history: list[str] | None = None, today=None,
-                  model_enabled: bool = False,
-                  model_transport: Callable | None = None) -> dict:
+def resolve_intent(prompt: str, *, model_enabled: bool = False,
+                   model_transport: Callable | None = None) -> dict:
     if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > MAX_PROMPT:
         raise ValueError("Prompt must be 1..400 characters")
     intent = {"mood": interpret_intent(prompt), "title": safe_title(prompt)}
@@ -105,10 +102,18 @@ def build_session(prompt: str, tracks: list[dict], rights_by_id: Mapping,
             engine = "ani"
         except (ValueError, KeyError, TypeError, httpx.HTTPError, json.JSONDecodeError):
             engine = "offline"
+    return {**intent, "engine": engine}
+
+
+def build_session(prompt: str, tracks: list[dict], rights_by_id: Mapping,
+                  territory: str, *, limit: int = 10,
+                  history: list[str] | None = None, today=None,
+                  model_enabled: bool = False,
+                  model_transport: Callable | None = None) -> dict:
+    intent = resolve_intent(prompt, model_enabled=model_enabled, model_transport=model_transport)
     suggestions = recommend(tracks, rights_by_id, territory, mood=intent["mood"],
                             limit=limit, history=history, today=today)
     return {
-        "title": intent["title"], "mood": intent["mood"],
-        "engine": engine, "tracks": suggestions,
+        **intent, "tracks": suggestions,
         "count": len(suggestions),
     }
