@@ -332,6 +332,74 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
 .aggilli-eq-bands input::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:12px;margin-left:-10px;border:1px solid #505758;border-radius:2px;background:linear-gradient(#f2f2ed,#9ca3a2 45%,#666d6e 49%,#d2d6d0 58%,#888e8c);box-shadow:0 2px 2px #1118}
 .aggilli-eq-bands input::-moz-range-thumb{width:25px;height:11px;border:1px solid #505758;border-radius:2px;background:linear-gradient(#f2f2ed,#9ca3a2 45%,#666d6e 49%,#d2d6d0 58%,#888e8c);box-shadow:0 2px 2px #1118}
 </style>
+<style>
+/* AGGILLI_RETRO_LOWER_DECK_V1: a parte de baixo usa as mesmas placas, visores e teclas do receiver. */
+#aggilliDjPanel,#aggilliQueuePanel,#aggilliSyncCloudPanel,#aggilliUploadPanel{
+ background:var(--metal)!important;color:#1b2223!important;
+ border:1px solid #eef0ed!important;border-bottom-color:#6b7070!important;border-top:3px solid #daddda!important;
+ border-radius:3px!important;box-shadow:inset 0 1px #fff9,0 3px 6px #0008!important;padding:14px 16px!important;
+}
+:is(#aggilliDjPanel,#aggilliQueuePanel,#aggilliSyncCloudPanel,#aggilliUploadPanel) :is(div,p,span,strong,small,label,summary,h3){color:inherit!important}
+#aggilliQueuePanel > div:first-child > strong,#aggilliUploadPanel > h3,
+#aggilliDjPanel > div:first-child strong{
+ font-size:15px!important;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#171c1d!important;
+}
+#aggilliDjPanel > div:first-child > div:first-child{color:#2f5a61!important;text-shadow:0 1px #fff8}
+#aggilliDjPanel label,#aggilliDjPanel summary{font-size:11px!important;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#313a3c!important}
+:is(#aggilliDjPanel,#aggilliUploadPanel) p,#aggilliDjPanel > div:last-child,#aggilliDjPanel > div:first-child small,
+#aggilliDjPanel > div:first-child div div{color:#313a3c!important}
+#aggilliDjCommercial{border-top-color:#7b8384!important}
+/* Teclas pretas, como as do transporte. */
+:is(#aggilliDjPanel,#aggilliQueuePanel,#aggilliSyncCloudPanel,#aggilliUploadPanel) button,
+.genre-card,.genre-card:hover,.genre-card.selected,.library-views button,.playlist-controls button,.favorite-track,.playlist-track{
+ background:var(--switch)!important;color:#eef3f3!important;border:1px solid #161b1c!important;
+ border-radius:3px!important;box-shadow:inset 0 1px #ffffff30,0 2px 2px #0005!important;font-weight:600;
+}
+:is(#aggilliDjPanel,#aggilliQueuePanel,#aggilliSyncCloudPanel,#aggilliUploadPanel) button{padding:8px 12px!important;font-size:12px!important;opacity:1!important}
+:is(#aggilliDjPanel,#aggilliUploadPanel) button:disabled{filter:grayscale(1) brightness(.75)}
+:is(#aggilliDjPanel,#aggilliQueuePanel,#aggilliSyncCloudPanel,#aggilliUploadPanel) button:hover,.genre-card:hover,.library-views button:hover{filter:brightness(1.23)}
+/* Tecla ligada: LED ciano no topo, como no rádio. */
+.genre-card.selected,.library-views button[aria-pressed="true"],#aggilliDjPanel [aria-pressed="true"]{
+ color:#b5e2e8!important;box-shadow:inset 0 3px #6fc4cf,inset 0 1px 6px #000a,0 1px 1px #0005!important;
+}
+#aggilliDjInterpret,#aggilliSyncCloud{color:#b5e2e8!important}
+/* Visores: vidro escuro com texto ciano em fonte mono. */
+#aggilliDjPanel input,#aggilliUploadPanel input[type="file"],#search,.playlist-controls input,.playlist-controls select,
+#aggilliDjStatus,#aggilliQueueStatus,#aggilliSyncCloudStatus,#aggilliUploadStatus{
+ background:var(--glass)!important;color:#a4dce3!important;border:1px solid #3d4e52!important;border-radius:3px!important;
+ box-shadow:inset 0 2px 9px #0009!important;font-family:ui-monospace,monospace!important;
+}
+#aggilliDjPanel input,#search,.playlist-controls input,.playlist-controls select{padding:9px 10px!important;font-size:13px!important}
+#aggilliDjPanel input::placeholder,#search::placeholder,.playlist-controls input::placeholder{color:#6f9399}
+#aggilliUploadPanel input[type="file"]{width:100%;padding:9px!important;margin:6px 0 0}
+#aggilliUploadPanel input[type="file"]::file-selector-button{background:var(--switch);color:#eef3f3;border:1px solid #161b1c;border-radius:3px;padding:6px 10px;margin-right:10px;cursor:pointer}
+#aggilliDjStatus,#aggilliQueueStatus,#aggilliSyncCloudStatus,#aggilliUploadStatus{display:block;min-height:34px;padding:8px 10px!important;margin:10px 0 0!important;font-size:12px!important}
+#aggilliDjStatus:empty{display:none}
+/* Mais específico que a cor herdada da placa: texto claro dentro dos visores. */
+#aggilliDjPanel #aggilliDjStatus,#aggilliQueuePanel #aggilliQueueStatus,#aggilliSyncCloudPanel #aggilliSyncCloudStatus,
+#aggilliUploadPanel #aggilliUploadStatus{color:#a4dce3!important}
+#aggilliDjPanel #aggilliDjResults,#aggilliQueuePanel #aggilliQueueItems,#aggilliDjPanel #aggilliDjCommercialResults{color:#edf6f6!important}
+:is(#aggilliDjResults,#aggilliQueueItems,#aggilliDjCommercialResults) :is(div,span,small,p){color:#9fbfc4!important}
+:is(#aggilliDjResults,#aggilliQueueItems,#aggilliDjCommercialResults) strong{color:#edf6f6!important;font-size:13px!important;letter-spacing:0;text-transform:none}
+:is(#aggilliDjResults,#aggilliQueueItems,#aggilliDjCommercialResults) [aria-current="true"] strong,
+:is(#aggilliDjResults,#aggilliQueueItems) .active strong{color:#a4dce3!important}
+#aggilliDjResults,#aggilliQueueItems,#aggilliDjCommercialResults:not(:empty){
+ background:var(--glass);border:1px solid #3d4e52;border-radius:3px;box-shadow:inset 0 2px 9px #0009;color:#edf6f6;margin-top:8px;
+}
+#aggilliDjResults:empty,#aggilliQueueItems:empty{display:none}
+:is(#aggilliDjResults,#aggilliQueueItems) :is(div,span,strong,small){color:inherit}
+:is(#aggilliDjResults,#aggilliQueueItems) > *{border-color:#2b3b3f!important;padding-left:10px!important;padding-right:10px!important}
+#aggilliUploadProgress progress{accent-color:#3b6f76}
+/* Biblioteca: régua de alumínio com a lista num visor. */
+.playlist-controls,.playlist-controls label{color:#c6d0d2}
+.playlist-controls label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.list-head{background:var(--metal)!important;color:#20292b!important;font-weight:800;letter-spacing:.12em;border:1px solid #eef0ed;border-bottom-color:#6b7070;border-radius:3px 3px 0 0;margin-top:2px}
+#library{border:1px solid #3d4e52;border-top:0;border-radius:0 0 3px 3px;box-shadow:inset 0 2px 9px #0009}
+.winamp-number,.winamp-duration{font-family:ui-monospace,monospace;color:#8fc3ca}
+.winamp-row.active .winamp-info strong,.winamp-row.active .winamp-number{color:#a4dce3}
+.genre-card small{color:#9fb6b9}
+.genre-card.selected small{color:#b5e2e8}
+</style>
 </head>
 <body>
 <main>
