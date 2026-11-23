@@ -59,7 +59,8 @@ def ani_intent(prompt: str, *, endpoint: str, token: str, model: str,
             {"role": "user", "content": prompt[:MAX_PROMPT]},
         ],
         "temperature": 0,
-        "max_tokens": 120,
+        # Modelos que raciocinam (ex.: Gemini Flash) gastam parte deste limite antes do JSON.
+        "max_tokens": 1024,
     }
     if transport is not None:
         response = transport(endpoint, request, token)

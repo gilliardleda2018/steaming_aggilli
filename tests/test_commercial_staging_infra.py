@@ -61,11 +61,13 @@ class AniSetupAssistantTests(unittest.TestCase):
 
     def test_only_anthropic_keys_and_clean_model_names_are_accepted(self):
         self.assertIn("[[ $key == sk-ant-* && $key != *[[:space:]]* ]]", self.SCRIPT)
-        self.assertIn("readonly default_model=claude-opus-5-5", self.SCRIPT)
+        self.assertIn("readonly claude_model=claude-opus-5-5", self.SCRIPT)
+        self.assertIn("readonly gemini_url=https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", self.SCRIPT)
 
     def test_validation_reports_engine_without_printing_the_key(self):
         self.assertIn('print("ANI VALIDADA: engine=ani"', self.SCRIPT)
-        self.assertIn("except anthropic.AuthenticationError:", self.SCRIPT)
+        self.assertIn("def masked(text):", self.SCRIPT)
+        self.assertIn('read -r -s -p "Chave da API do Gemini', self.SCRIPT)
         self.assertNotIn("print(os.environ", self.SCRIPT)
 
 

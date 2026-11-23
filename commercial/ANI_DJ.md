@@ -41,3 +41,12 @@ The original Winamp, Android player, Nextcloud, AzuraCast and DNS are unchanged.
 - Só o texto do pedido vai para o modelo; histórico, catálogo e dados do ouvinte não.
 - Qualquer falha (chave, rede, recusa, JSON fora do esquema) mantém a seleção local
   (`engine=offline`). Configure com `sudo bash scripts/configure-ani-staging.sh`.
+
+## Google Gemini (plano gratuito) como motor da DJ ANI
+- `AGGILLI_ANI_PROVIDER=openai-compatible` com
+  `AGGILLI_ANI_CHAT_URL=https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`,
+  a chave do Google AI Studio em `AGGILLI_ANI_API_KEY` e um modelo Gemini Flash.
+- O assistente `scripts/configure-ani-staging.sh` (opção 1) lista os modelos liberados
+  para a chave e sugere um Flash estável.
+- No plano gratuito o Google pode usar os pedidos para melhorar os modelos; só o texto
+  do pedido musical é enviado.
