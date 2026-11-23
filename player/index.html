@@ -470,13 +470,6 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
  <details id="aggilliDjCommercial" style="margin:10px 0;border-top:1px solid #355047;padding-top:10px">
  <summary style="cursor:pointer;font-size:12px;color:#b8dfd0">Conectar DJ ANI comercial (homologação)</summary>
  <p style="font-size:11px;color:#a5b8b0">Apenas HTTPS. Token temporário mantido nesta página. A reprodução comercial está disponível na prévia autorizada.</p>
- <form id="aggilliDjLogin" autocomplete="on" style="margin:0 0 8px">
-  <label for="aggilliDjEmail" style="font-size:12px">E-mail do ouvinte</label>
-  <input id="aggilliDjEmail" type="email" autocomplete="username" maxlength="254" required style="margin:4px 0;width:100%;border-radius:8px">
-  <label for="aggilliDjPassword" style="font-size:12px">Senha</label>
-  <input id="aggilliDjPassword" type="password" autocomplete="current-password" minlength="12" maxlength="256" required style="margin:4px 0;width:100%;border-radius:8px">
-  <button type="submit" id="aggilliDjLoginRun" style="border-radius:8px;margin:8px 0">Entrar</button>
- </form>
  <label for="aggilliDjApi" style="font-size:12px">URL HTTPS da API comercial</label>
  <input id="aggilliDjApi" type="url" placeholder="https://staging.exemplo.com" autocomplete="off" style="margin:4px 0;width:100%;border-radius:8px">
  <label for="aggilliDjToken" style="font-size:12px">Token do ouvinte</label>
@@ -2087,45 +2080,9 @@ fetch('catalogo.json',{cache:'no-store'})
    if(requestId===playbackRequestId&&sessionRevision===revision)status.textContent=error.message;
   }
  }
- /* Login no próprio player: a sessão vai direto para o campo do token, sem copiar nada. */
- const loginForm=document.getElementById('aggilliDjLogin');
- const email=document.getElementById('aggilliDjEmail');
- const password=document.getElementById('aggilliDjPassword');
- const loginErrors={401:'E-mail ou senha incorretos.',422:'Dados inválidos: a senha precisa de pelo menos 12 caracteres.',429:'Muitas tentativas; aguarde um pouco.'};
- function sameOriginApi(){
-  if(!api.value)api.value=new URL('commercial-api',location.href).href;
-  const base=new URL(api.value);
-  if(base.protocol!=='https:'||base.origin!==location.origin||base.username||base.password||base.search||base.hash)
-   throw Error('Entre pelo player em HTTPS, com a API no mesmo endereço.');
-  return base.href.replace(/\/$/,'');
- }
- async function signIn(){
-  if(!loginForm.reportValidity())return;
-  const buttons=loginForm.querySelectorAll('button');
-  buttons.forEach(b=>b.disabled=true);
-  try{
-   const endpoint=sameOriginApi();
-   const body=JSON.stringify({email:email.value.trim(),password:password.value});
-   const post=path=>fetch(endpoint+path,{method:'POST',redirect:'error',cache:'no-store',credentials:'omit',
-    headers:{'Content-Type':'application/json'},body});
-   const response=await post('/listeners/login');
-   if(!response.ok)throw Error(loginErrors[response.status]||'Não foi possível entrar (HTTP '+response.status+').');
-   const session=await response.json();
-   if(typeof session.access_token!=='string'||session.access_token.length<32)throw Error('Resposta de login inválida.');
-   revision++;
-   token.value=session.access_token;
-   status.textContent='Conectada à ANI como '+email.value.trim()+'.';
-  }catch(error){status.textContent=error.message;}
-  finally{password.value='';buttons.forEach(b=>b.disabled=false);}
- }
- loginForm.addEventListener('submit',event=>{event.preventDefault();signIn();});
  clear.addEventListener('click',()=>{
   revision++;
-  if(token.value.length>=32&&api.value){
-   try{fetch(sameOriginApi()+'/listeners/logout',{method:'POST',redirect:'error',cache:'no-store',
-    credentials:'omit',headers:{'Authorization':'Bearer '+token.value}}).catch(()=>{});}catch(_){}
-  }
-  api.value='';token.value='';password.value='';output.replaceChildren();
+  api.value='';token.value='';output.replaceChildren();
   if(playbackMode==='commercial'){
    stopAudio();audio.removeAttribute('src');audio.load();playbackMode='none';
   }
