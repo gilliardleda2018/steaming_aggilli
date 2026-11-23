@@ -31,8 +31,9 @@ class AndroidVoiceBridgeTests(unittest.TestCase):
         self.assertIn("const nativeVoice=window.AggilliVoice;", HTML)
         self.assertIn("nativeVoice.postMessage('start');", HTML)
         self.assertIn("nativeVoice.postMessage('cancel');", HTML)
-        self.assertLess(HTML.index("if(nativeVoice){"), HTML.index("if(!Recognition){status.value="))
-        self.assertIn("input.value=data.text.trim().slice(0,100);\n   execute(input.value);", HTML)
+        self.assertLess(HTML.index("if(nativeVoice){nativeListening=true;"), HTML.index("if(!Recognition){report("))
+        self.assertIn("if(data?.type==='result'&&typeof data.text==='string')target.onText(data.text.trim());", HTML)
+        self.assertIn("onText:text=>{input.value=text.slice(0,100);execute(input.value);}", HTML)
 
 
 if __name__ == "__main__":

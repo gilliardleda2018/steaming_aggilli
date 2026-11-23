@@ -457,6 +457,7 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
   <input id="aggilliDjPrompt" maxlength="250" placeholder="Ex.: 30 minutos de rock progressivo sem repetir" style="flex:1;min-width:180px;margin:0;border-radius:8px" />
   <button type="button" id="aggilliDjGenerate" style="border-radius:8px">Criar seleção</button>
   <button type="button" id="aggilliDjInterpret" style="border-radius:8px">Pedir à ANI</button>
+  <button type="button" id="aggilliDjMic" aria-pressed="false" aria-label="Falar o pedido para a ANI" style="border-radius:8px">MIC</button>
  </div>
  <div id="aggilliDjChips" style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px">
   <button type="button" data-dj="foco" style="padding:7px 11px;border-radius:8px">Foco</button>
@@ -1512,9 +1513,21 @@ fetch('catalogo.json',{cache:'no-store'})
    return numbers[parts[0]]+numbers[parts[1]];
   return NaN;
  }
+ // "ANI, uma hora de rock para dirigir": o resto da frase vira o pedido da ANI.
+ const aniCall=/^(?:(?:pede|peca|pedir|fala|diga)\s+(?:a|pra|para)\s+)?(?:ani|anni|annie|ane|anne|any|dj)\s+(\S.*)$/;
+ const aniPrefix=/^\s*(?:(?:ok|ei|oi|hey|olá|ola)[\s,]+)*(?:(?:pe[çc]a|pede|pedir|fala|diga)\s+(?:à|a|pra|para)\s+)?(?:ani|anni|annie|ane|anne|any|dj)\b[\s,:!.-]*/i;
+ function askAni(text,report){
+  const prompt=get('aggilliDjPrompt'), interpret=get('aggilliDjInterpret');
+  if(!prompt||!interpret){report('Painel da ANI indisponível.');return;}
+  prompt.value=text.trim().slice(0,250);
+  report('Pedido enviado à ANI.');
+  interpret.click();
+ }
  function execute(raw){
   const command=clean(raw);
   const finish=message=>{status.value='“'+raw+'” · '+message;};
+  const ani=command.match(aniCall);
+  if(ani){askAni(raw.replace(aniPrefix,'')||ani[1],finish);return;}
   const volume=command.match(/^(?:(?:coloca|coloque|colocar|poe|ponha|deixa|deixe|deixar|ajusta|ajuste|ajustar|muda|mude|mudar|bota|bote|botar)\s+)?(?:o\s+)?(?:volume|som)(?:\s+(?:em|para|pra|a|no|na|ao|de))?\s+(.+?)(?:\s*%|\s+por\s*cento|\s+porcento)?$/);
   const step=command.match(/^(aumenta|aumente|aumentar|sobe|suba|subir|abaixa|abaixe|abaixar|baixa|baixe|baixar|diminui|diminua|diminuir)(?: o)? (?:volume|som)(?: um pouco)?$/);
   const timer=command.match(/^(?:desligue|desliga|desligar|pare|parar|temporizador|timer)(?:\s+(?:o\s+)?(?:player|musica|radio|som))?(?:\s+(?:em|de|daqui a|daqui|depois de|apos))?\s+(.+?)\s+minutos?$/);
@@ -1565,7 +1578,7 @@ fetch('catalogo.json',{cache:'no-store'})
    play.click();finish('Sintonizando '+button.title+'.');
   }else finish('Comando não reconhecido.');
  }
- let recognition;
+ let recognition, listener=null;
  // No APK, o reconhecimento de fala vem da ponte nativa AggilliVoice.
  const nativeVoice=window.AggilliVoice;
  let nativeListening=false;
@@ -1579,23 +1592,23 @@ fetch('catalogo.json',{cache:'no-store'})
   let data;
   try{data=JSON.parse(event.data)}catch(_){return}
   nativeListening=false;
-  mic.setAttribute('aria-pressed','false');
-  if(data?.type==='result'&&typeof data.text==='string'){
-   input.value=data.text.trim().slice(0,100);
-   execute(input.value);
-  }else status.value=nativeErrors[data?.reason]||'Não foi possível ouvir. Tente novamente ou digite o comando.';
+  const target=listener||{button:mic,report:message=>{status.value=message;},onText:text=>{input.value=text.slice(0,100);execute(input.value);}};
+  target.button.setAttribute('aria-pressed','false');
+  if(data?.type==='result'&&typeof data.text==='string')target.onText(data.text.trim());
+  else target.report(nativeErrors[data?.reason]||'Não foi possível ouvir. Tente novamente ou digite o pedido.');
  };
  function cancel(){
+  const button=listener?.button||mic;
   if(nativeListening){
    nativeListening=false;
-   mic.setAttribute('aria-pressed','false');
+   button.setAttribute('aria-pressed','false');
    nativeVoice.postMessage('cancel');
    return;
   }
   if(!recognition)return;
   const current=recognition;
   recognition=undefined;
-  mic.setAttribute('aria-pressed','false');
+  button.setAttribute('aria-pressed','false');
   current.abort();
  }
  toggle.addEventListener('click',()=>{
@@ -1609,41 +1622,48 @@ fetch('catalogo.json',{cache:'no-store'})
   cancel();
   execute(input.value.trim());
  });
- mic.addEventListener('click',()=>{
-  if(recognition||nativeListening){cancel();status.value='Escuta cancelada.';return;}
-  if(nativeVoice){
-   nativeListening=true;
-   mic.setAttribute('aria-pressed','true');
-   status.value='Ouvindo…';
-   nativeVoice.postMessage('start');
-   return;
+ // Uma escuta por vez; cada botão de microfone diz para onde vai o texto ouvido.
+ function listen(button,report,onText){
+  if(recognition||nativeListening){
+   const same=listener?.button===button;
+   cancel();report('Escuta cancelada.');
+   if(same)return;
   }
-  if(!Recognition){status.value='Microfone indisponível neste navegador. Digite o comando.';return;}
+  listener={button,report,onText};
+  const begin=()=>{button.setAttribute('aria-pressed','true');report('Ouvindo…');};
+  if(nativeVoice){nativeListening=true;begin();nativeVoice.postMessage('start');return;}
+  if(!Recognition){report('Microfone indisponível neste navegador. Digite o pedido.');return;}
   const current=new Recognition();
   recognition=current;
   current.lang='pt-BR';
   current.continuous=false;
   current.interimResults=false;
-  mic.setAttribute('aria-pressed','true');
-  status.value='Ouvindo…';
+  begin();
+  let heard=false;
   current.onresult=event=>{
    if(recognition!==current)return;
-   input.value=event.results[0][0].transcript.trim().slice(0,100);
-   execute(input.value);
+   heard=true;
+   onText(event.results[0][0].transcript.trim());
   };
   current.onerror=()=>{
-   if(recognition===current)status.value='Não foi possível ouvir. Tente novamente ou digite o comando.';
+   if(recognition===current){heard=true;report('Não foi possível ouvir. Tente novamente ou digite o pedido.');}
   };
   current.onend=()=>{
    if(recognition!==current)return;
    recognition=undefined;
-   mic.setAttribute('aria-pressed','false');
-   if(status.value==='Ouvindo…')status.value='Nenhum comando captado.';
+   button.setAttribute('aria-pressed','false');
+   if(!heard)report('Nenhum comando captado.');
   };
   try{current.start();}
-  catch(_){recognition=undefined;mic.setAttribute('aria-pressed','false');status.value='Não foi possível abrir o microfone. Digite o comando.';}
- });
- document.addEventListener('visibilitychange',()=>{if(document.hidden&&(recognition||nativeListening)){cancel();status.value='Escuta cancelada.';}});
+  catch(_){recognition=undefined;button.setAttribute('aria-pressed','false');report('Não foi possível abrir o microfone. Digite o pedido.');}
+ }
+ mic.addEventListener('click',()=>listen(mic,message=>{status.value=message;},text=>{
+  input.value=text.slice(0,100);execute(input.value);
+ }));
+ const aniMic=get('aggilliDjMic'), aniStatus=get('aggilliDjStatus');
+ if(aniMic&&aniStatus)aniMic.addEventListener('click',()=>listen(aniMic,message=>{aniStatus.textContent=message;},
+  text=>askAni(text.replace(aniPrefix,'')||text,message=>{aniStatus.textContent=message;})));
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&(recognition||nativeListening)){const report=listener?.report;cancel();(report||(m=>{status.value=m;}))('Escuta cancelada.');}});
 })();
 </script>
 <script>
