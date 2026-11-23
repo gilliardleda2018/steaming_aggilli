@@ -110,14 +110,34 @@ def normalized_filename(name):
     return re.sub(r'[^a-z0-9]+', '_', Path(ascii_name).stem.lower()).strip('_')
 
 
-def assign_playlists(azura, headers, media_id, playlist_ids=(1, 2)):
-    """Assign approved station playlists using AzuraCast's documented media PUT."""
+APPROVED_PLAYLISTS = (1, 2)
+
+
+def media_playlists(media):
+    return {p["id"] for p in media.get("playlists", []) if isinstance(p, dict) and isinstance(p.get("id"), int)}
+
+
+def index_media(listing):
+    """Map normalized file names to AzuraCast media; names used twice map to None."""
+    index = {}
+    for media in listing:
+        key = normalized_filename(Path(media.get("path", "")).name)
+        index[key] = None if key in index else media
+    return index
+
+
+def assign_playlists(azura, headers, media_id, playlist_ids=APPROVED_PLAYLISTS, keep=()):
+    """Assign approved station playlists using AzuraCast's documented media PUT.
+
+    The PUT replaces the media's playlist list, so playlists in ``keep`` are sent
+    along to avoid removing a track from playlists it already belongs to.
+    """
     if not isinstance(media_id, int) or media_id <= 0:
         raise RuntimeError("Upload response did not provide a numeric media ID")
     response = azura.put(
         f"{AZURA}/file/{media_id}",
         headers=headers,
-        json={"playlists": list(playlist_ids)},
+        json={"playlists": sorted(set(playlist_ids) | set(keep))},
     )
     response.raise_for_status()
     check = azura.get(AZURA + "/files", headers=headers)
@@ -147,12 +167,27 @@ def main():
     with httpx.Client(auth=(user, password), timeout=httpx.Timeout(120, connect=15), follow_redirects=False) as cloud, httpx.Client(timeout=240) as azura:
         files = azura.get(AZURA + "/files", headers=headers)
         files.raise_for_status()
-        existing = {normalized_filename(Path(x.get("path", "")).name) for x in files.json()}
+        existing = index_media(files.json())
         for name, size, etag in list_remote(cloud):
             if imported >= limit:
                 break
             output = name if name.lower().endswith(".mp3") else Path(name).stem + ".mp3"
-            if normalized_filename(output) in existing or (name in state and state[name].get("etag") == etag):
+            key = normalized_filename(output)
+            if key in existing:
+                media = existing[key]
+                # Already in the library but outside the player playlists: link it
+                # instead of skipping, so it reaches the catalog without re-uploading.
+                if media is None:
+                    print(f"SKIP ambiguous: {output}", flush=True)
+                elif isinstance(media.get("id"), int) and not set(APPROVED_PLAYLISTS) <= media_playlists(media):
+                    print(f"LINK existing: {output}", flush=True)
+                    assign_playlists(azura, headers, media["id"], keep=media_playlists(media))
+                    media["playlists"] = [{"id": i} for i in sorted(set(APPROVED_PLAYLISTS) | media_playlists(media))]
+                    imported += 1
+                else:
+                    print(f"SKIP exists: {output}", flush=True)
+                continue
+            if name in state and state[name].get("etag") == etag:
                 print(f"SKIP exists: {output}", flush=True)
                 continue
             print(f"SYNC: {name} -> {output}", flush=True)
@@ -187,7 +222,7 @@ def main():
                         raise RuntimeError("Cannot uniquely identify uploaded media")
                     media_id = matches[0].get("id")
                 assign_playlists(azura, headers, media_id)
-                existing.add(normalized_filename(output))
+                existing[key] = {"id": media_id, "playlists": [{"id": i} for i in APPROVED_PLAYLISTS]}
                 imported += 1
                 state[name] = {"etag": etag, "azuracast_filename": output}
                 temp = STATE_FILE.with_suffix(".tmp")

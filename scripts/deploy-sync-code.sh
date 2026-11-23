@@ -53,6 +53,7 @@ git -C "$repo" merge-base --is-ancestor "$commit" "origin/$branch" ||
 release=$base/releases/$commit
 install -d -m 0755 "$base/releases"
 stage=$(mktemp -d "$base/releases/.stage-XXXXXX")
+chmod 0755 "$stage"
 trap 'rm -rf -- "$stage"' EXIT
 for file in "${files[@]}"; do
   git -C "$repo" show "$commit:integrations/nextcloud_azura/$file" >"$stage/$file"
