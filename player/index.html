@@ -1490,9 +1490,19 @@ fetch('catalogo.json',{cache:'no-store'})
  const input=get('voiceCommand'), mic=get('voiceMic'), status=get('voiceStatus');
  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
  const normalize=text=>text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-  .replace(/[.!?,]+$/g,'').trim().replace(/\s+/g,' ');
+  .replace(/[.!?,;:]+/g,' ').replace(/\u00a0/g,' ').trim().replace(/\s+/g,' ');
+ // O reconhecedor de fala devolve frases naturais: tira cortesias e o chamado "Aggilli".
+ const clean=text=>normalize(text)
+  .replace(/^(?:(?:ok|ei|oi|hey|ola|por favor)\s+)+/,'')
+  .replace(/^a(?:g+|j|gu)il+[ei]\s+(?=\S)/,'')
+  .replace(/\s+por favor$/,'');
+ // Nomes de esta\u00e7\u00e3o: ignora "r\u00e1dio"/"esta\u00e7\u00e3o" e aceita grafias como "Agile" para Aggilli.
+ const stationKey=text=>normalize(text).replace(/\b(?:a|o|na|no|radio|estacao|fm)\b/g,' ')
+  .replace(/[^a-z0-9]/g,'').replace(/^a(?:g+|j|gu)il+[ei]/,'aggilli')||'aggilli';
  const numbers={zero:0,um:1,dois:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,
-  quinze:15,vinte:20,trinta:30,quarenta:40,cinquenta:50,sessenta:60,setenta:70,oitenta:80,noventa:90,cem:100};
+  onze:11,doze:12,treze:13,catorze:14,quatorze:14,quinze:15,dezesseis:16,dezessete:17,dezoito:18,dezenove:19,
+  vinte:20,trinta:30,quarenta:40,cinquenta:50,sessenta:60,setenta:70,oitenta:80,noventa:90,cem:100,
+  minimo:0,maximo:100};
  function amount(value){
   if(/^\d{1,3}$/.test(value))return Number(value);
   const parts=value.split(' e ');
@@ -1502,12 +1512,22 @@ fetch('catalogo.json',{cache:'no-store'})
   return NaN;
  }
  function execute(raw){
-  const command=normalize(raw);
+  const command=clean(raw);
   const finish=message=>{status.value='“'+raw+'” · '+message;};
-  const volume=command.match(/^volume(?: em| para)?\s+(.+?)(?:\s*%| por cento)?$/);
-  const timer=command.match(/^(?:desligue|pare|temporizador)(?: em)? (.+?) minutos?$/);
-  const station=command.match(/^(?:sintonize|toque a radio) (.+)$/);
-  if(volume){
+  const volume=command.match(/^(?:(?:coloca|coloque|colocar|poe|ponha|deixa|deixe|deixar|ajusta|ajuste|ajustar|muda|mude|mudar|bota|bote|botar)\s+)?(?:o\s+)?(?:volume|som)(?:\s+(?:em|para|pra|a|no|na|ao|de))?\s+(.+?)(?:\s*%|\s+por\s*cento|\s+porcento)?$/);
+  const step=command.match(/^(aumenta|aumente|aumentar|sobe|suba|subir|abaixa|abaixe|abaixar|baixa|baixe|baixar|diminui|diminua|diminuir)(?: o)? (?:volume|som)(?: um pouco)?$/);
+  const timer=command.match(/^(?:desligue|desliga|desligar|pare|parar|temporizador|timer)(?:\s+(?:o\s+)?(?:player|musica|radio|som))?(?:\s+(?:em|de|daqui a|daqui|depois de|apos))?\s+(.+?)\s+minutos?$/);
+  const skip=command.match(/^(?:(proxim[ao]|avanca|avancar|avance|pula|pular|pule)|(anterior|volta|voltar|volte))(?: (?:a )?(?:faixa|musica))?$/)
+   ||command.match(/^(?:a )?(?:faixa|musica) (?:(proxima)|(anterior))$/);
+  // "Sintonize" aceita o nome direto; os outros verbos precisam de "rádio" ou "estação".
+  const station=command.match(/^(?:sintonize|sintoniza|sintonizar)\s+(?:(?:a|o|na|no)\s+)?(?:(?:radio|estacao)\b\s*)?(.*)$/)
+   ||command.match(/^(?:toque|toca|tocar|ouvir|ouca|abre|abra|abrir|liga|ligue|ligar|coloca|coloque|colocar)\s+(?:(?:a|o|na|no)\s+)?(?:radio|estacao)\b\s*(.*)$/);
+  if(step){
+   const control=get('aggilliVolume');
+   const level=Math.max(0,Math.min(100,Number(control.value)+(/^(aum|sob|sub)/.test(step[1])?10:-10)));
+   control.value=String(level);control.dispatchEvent(new Event('input',{bubbles:true}));
+   finish('Volume em '+level+'%.');
+  }else if(volume){
    const level=amount(volume[1]);
    if(!Number.isInteger(level)||level>100){finish('Use um volume de 0 a 100.');return;}
    const control=get('aggilliVolume');
@@ -1521,27 +1541,27 @@ fetch('catalogo.json',{cache:'no-store'})
    }
    control.value=String(minutes);control.dispatchEvent(new Event('change',{bubbles:true}));
    finish('Temporizador em '+minutes+' minutos.');
+  }else if(/^(?:pausa|pause|pausar)(?: (?:a )?(?:musica|radio|reproducao))?$/.test(command)){
+   pauseAudio();finish('Reprodução pausada.');
+  }else if(/^(?:parar|pare|para|stop)(?: (?:a )?(?:musica|radio|reproducao))?$/.test(command)){
+   stopAudio();finish('Reprodução interrompida.');
+  }else if(/^(?:reproduzir|continuar|continua|continue|retomar|retoma|retome|play|tocar|toca|toque)(?: (?:a )?(?:musica|reproducao))?$/.test(command)){
+   if(!activeMedia().getAttribute('src')){finish('Escolha uma faixa ou estação primeiro.');return;}
+   resumeAudio();finish('Retomando a reprodução.');
+  }else if(skip){
+   if(playbackMode==='radio'||!playQueue.length){finish('Escolha uma fila de músicas primeiro.');return;}
+   if(skip[1])nextTrack();else previousTrack();
+   finish('Trocando de faixa.');
   }else if(station||command==='radio'){
-   const target=station?.[1]||'aggilli radio';
-   const memory=target.match(/^mem(?:oria)? (.+)$/);
+   const target=(station?.[1]||'').trim();
+   const memory=target.match(/^(?:a )?mem(?:oria)?(?: numero)? (.+)$/);
    const buttons=[...get('tunerMemories').querySelectorAll('button')];
-   const button=memory?buttons[amount(memory[1])]:buttons.find(item=>normalize(item.title)===target);
+   const button=memory?buttons[amount(memory[1])]:buttons.find(item=>stationKey(item.title)===stationKey(target));
    if(!button){finish('Estação não cadastrada.');return;}
    button.click();
    const play=get('tunerPlay');
    if(play.disabled){finish('Essa memória está vazia.');return;}
    play.click();finish('Sintonizando '+button.title+'.');
-  }else if(/^(pausa|pause|pausar)$/.test(command)){
-   pauseAudio();finish('Reprodução pausada.');
-  }else if(/^(parar|pare)$/.test(command)){
-   stopAudio();finish('Reprodução interrompida.');
-  }else if(/^(reproduzir|continuar|retomar)$/.test(command)){
-   if(!activeMedia().getAttribute('src')){finish('Escolha uma faixa ou estação primeiro.');return;}
-   resumeAudio();finish('Retomando a reprodução.');
-  }else if(/^(proxima|anterior)( faixa)?$/.test(command)){
-   if(playbackMode==='radio'||!playQueue.length){finish('Escolha uma fila de músicas primeiro.');return;}
-   if(command.startsWith('proxima'))nextTrack();else previousTrack();
-   finish('Trocando de faixa.');
   }else finish('Comando não reconhecido.');
  }
  let recognition;
