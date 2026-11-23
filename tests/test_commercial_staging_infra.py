@@ -45,5 +45,21 @@ class CommercialStagingInfraTests(unittest.TestCase):
         self.assertIn('3<<<"$email"$\'\\n\'"$password"', TOKEN)
 
 
+class AniSetupAssistantTests(unittest.TestCase):
+    SCRIPT = (ROOT / "scripts" / "configure-ani-staging.sh").read_text(encoding="utf-8")
+
+    def test_key_is_read_without_echo_and_file_stays_root_only(self):
+        self.assertIn('read -r -s -p "Chave da API', self.SCRIPT)
+        self.assertIn('chown root:root "$tmp"; chmod 0600 "$tmp"', self.SCRIPT)
+        self.assertIn('cp -p -- "$env_file" "$backup"', self.SCRIPT)
+
+    def test_only_clean_https_urls_are_accepted(self):
+        self.assertIn("^https://[^/@?#[:space:]]+(/[^?#[:space:]]*)?$", self.SCRIPT)
+
+    def test_validation_reports_engine_and_hides_the_key(self):
+        self.assertIn('print("ANI VALIDADA: engine=ani"', self.SCRIPT)
+        self.assertIn('.replace(os.environ["AGGILLI_ANI_API_KEY"], "***")', self.SCRIPT)
+
+
 if __name__ == "__main__":
     unittest.main()
