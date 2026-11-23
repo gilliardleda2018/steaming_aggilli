@@ -237,6 +237,14 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
 .winamp-row:nth-child(even){background:#141b1d}
 .winamp-row:hover,.winamp-row.active{background:#263e43!important}
 .list-head{background:#303a3d;color:#d2dddd}
+.library-views{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 9px}
+.library-views button,.favorite-track{background:var(--switch);color:#edf5f6;border:1px solid #566367;border-radius:3px}
+.library-views button{padding:7px 11px;font-size:12px}
+.library-views button[aria-pressed="true"]{background:#315358;border-color:#8ec7ce}
+.list-head,.winamp-row,.winamp-row:nth-child(even){grid-template-columns:40px minmax(0,1fr) 58px 32px}
+.favorite-track{padding:3px;min-height:29px;font-size:17px;line-height:1}
+.favorite-track[aria-pressed="true"]{color:#f4cf85}
+.library-empty{padding:15px;color:#c3cbcd;font-size:13px}
 #aggilliDjPanel,#aggilliQueuePanel,#aggilliSyncCloudPanel,#aggilliUploadPanel{
  background:var(--glass)!important;border:1px solid #576365!important;border-top:5px solid #abb2b1!important;border-radius:3px!important;
 }
@@ -245,6 +253,7 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
  main{margin:0;padding:8px;border-radius:0}
  .player{padding:11px}.app-head{padding:10px}.app-head strong{font-size:15px}
  .music-controls button{min-width:34px;padding:6px}
+ .list-head,.winamp-row,.winamp-row:nth-child(even){grid-template-columns:25px minmax(0,1fr) 44px 30px}
  .receiver-tools #aggilliDisplayToggle{margin-left:0}
 }
 </style>
@@ -350,8 +359,13 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
 </section>
  <div class="genres" id="genreCards"></div>
  <div class="library-bar"><h2 id="libraryHeading">Biblioteca musical</h2><div id="status">Carregando biblioteca...</div></div>
+ <div class="library-views" id="libraryViews" role="group" aria-label="Exibição da biblioteca">
+  <button type="button" data-view="all" aria-pressed="true">Todas</button>
+  <button type="button" data-view="favorites" aria-pressed="false">Favoritas</button>
+  <button type="button" data-view="recent" aria-pressed="false">Recentes</button>
+ </div>
  <input id="search" placeholder="Pesquisar artista ou música..." aria-label="Pesquisar artista ou música" oninput="render()">
- <div class="list-head"><span>#</span><span>ARTISTA — TÍTULO</span><span style="text-align:right">TEMPO</span></div>
+ <div class="list-head"><span>#</span><span>ARTISTA — TÍTULO</span><span style="text-align:right">TEMPO</span><span aria-label="Favorita">★</span></div>
  <div id="library"></div>
 
 
@@ -484,6 +498,28 @@ const savedGenres = JSON.parse(
 Object.assign(genres, savedGenres);
 // AGGILLI_GENRE_EDITOR_V1
 let selectedGenre='Todos';
+let libraryView='all';
+const libraryViews=document.getElementById('libraryViews');
+const favoritesKey='aggilli-library-favorites-v1';
+const recentKey='aggilli-library-recent-v1';
+function readTrackIds(key){
+ try{
+  const values=JSON.parse(localStorage.getItem(key)||'[]');
+  return Array.isArray(values)?[...new Set(values.filter(value=>typeof value==='string'))]:[];
+ }catch(_){return []}
+}
+function saveTrackIds(key,values){
+ try{localStorage.setItem(key,JSON.stringify(values));}catch(_){}
+}
+const favorites=new Set(readTrackIds(favoritesKey));
+let recentIds=readTrackIds(recentKey).slice(0,50);
+libraryViews.querySelectorAll('[data-view]').forEach(button=>{
+ button.addEventListener('click',()=>{
+  libraryView=button.dataset.view;
+  libraryViews.querySelectorAll('[data-view]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+  render();
+ });
+});
 const genreNames=['Todos','Rock','Rock Progressivo','Pop','MPB','Sertanejo','Forro','Eletronica','Outros'];
 const genreColors=['#285b45','#913e50','#7750a3','#a46b2e','#456d48','#a76b30','#286e83','#48565b','#536477'];
 function drawGenres(){
@@ -671,10 +707,23 @@ function render(){
  const filtered=tracks.filter(t=>{
   const m=t.media||{};const parts=trackArtistTitle(t);
   const searchText=[parts.artist,parts.title,m.text||''].join(' ').toLocaleLowerCase('pt-BR');
-  return (selectedGenre==='Todos'||(genres[t.track_id]||'Outros')===selectedGenre)&&searchText.includes(q);
+  return (libraryView!=='favorites'||favorites.has(t.track_id)) &&
+   (selectedGenre==='Todos'||(genres[t.track_id]||'Outros')===selectedGenre)&&searchText.includes(q);
  });
+ if(libraryView==='recent'){
+  const matches=new Map(filtered.map(t=>[t.track_id,t]));
+  filtered.splice(0,filtered.length,...recentIds.map(id=>matches.get(id)).filter(Boolean));
+ }
  if(!aggilliDjQueueActive)playQueue=filtered.map(t=>t.track_id);
  document.getElementById('status').textContent=filtered.length+' músicas';
+ if(!filtered.length){
+  const empty=document.createElement('p');
+  empty.className='library-empty';
+  empty.textContent=q||selectedGenre!=='Todos'?'Nenhuma faixa para os filtros atuais.':
+   libraryView==='favorites'?'Marque uma faixa com a estrela para salvá-la aqui.':
+   libraryView==='recent'?'As faixas que você ouvir aparecerão aqui.':'Nenhuma faixa na biblioteca.';
+  box.append(empty);
+ }
  filtered.forEach((t,i)=>{
   const row=document.createElement('div');row.className='winamp-row';
   row.dataset.trackId=t.track_id;row.dataset.index=String(i+1).padStart(2,'0');
@@ -691,7 +740,27 @@ function render(){
   select.onchange=e=>{e.stopPropagation();genres[t.track_id]=select.value;localStorage.setItem('aggilli-generos',JSON.stringify(genres));drawGenres();render();refreshNow()};
   info.append(artist,title,select);
   const duration=document.createElement('span');duration.className='winamp-duration';duration.textContent=trackSeconds(t)===null?'--:--':formatTime(trackSeconds(t));
-  row.append(num,info,duration);
+  const favorite=document.createElement('button');
+  favorite.type='button';
+  favorite.className='favorite-track';
+  const updateFavorite=()=>{
+   const marked=favorites.has(t.track_id);
+   favorite.textContent=marked?'★':'☆';
+   favorite.setAttribute('aria-pressed',String(marked));
+   favorite.setAttribute('aria-label','Favorita: '+parts.title);
+  };
+  updateFavorite();
+  favorite.addEventListener('click',event=>{
+   event.stopPropagation();
+   if(favorites.has(t.track_id))favorites.delete(t.track_id);
+   else favorites.add(t.track_id);
+   saveTrackIds(favoritesKey,[...favorites]);
+   if(libraryView==='favorites'){
+    render();
+    libraryViews.querySelector('[data-view="favorites"]').focus();
+   }else updateFavorite();
+  });
+  row.append(num,info,duration,favorite);
   row.addEventListener('pointerenter',()=>preauthorizeTrack(t),{once:true});
   row.addEventListener('focusin',()=>preauthorizeTrack(t),{once:true});
   row.onclick=()=>playTrack(t);
@@ -718,6 +787,13 @@ cloudVideo.addEventListener('loadedmetadata',updateProgress);
 audio.addEventListener('durationchange',updateProgress);
 cloudVideo.addEventListener('durationchange',updateProgress);
 audio.addEventListener('play',()=>{document.getElementById('mainPlay').textContent='⏸';refreshNow()});
+function recordRecent(event){
+ if(playbackMode!=='track'||event.currentTarget!==activeMedia()||!currentTrackId||recentIds[0]===currentTrackId)return;
+ recentIds=[currentTrackId,...recentIds.filter(id=>id!==currentTrackId)].slice(0,50);
+ saveTrackIds(recentKey,recentIds);
+}
+audio.addEventListener('playing',recordRecent);
+cloudVideo.addEventListener('playing',recordRecent);
 cloudVideo.addEventListener('play',()=>{audio.pause();document.getElementById('mainPlay').textContent='⏸';refreshNow()});
 audio.addEventListener('pause',()=>{if(activeMedia()===audio)document.getElementById('mainPlay').textContent='▶'});
 cloudVideo.addEventListener('pause',()=>{if(activeMedia()===cloudVideo)document.getElementById('mainPlay').textContent='▶'});
