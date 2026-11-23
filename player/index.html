@@ -264,6 +264,35 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
  .receiver-tools #aggilliDisplayToggle{margin-left:0}
 }
 </style>
+
+<style>
+/* Rotary controls on the aluminum faceplate */
+.aggilli-volume-line{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
+.volume-dial{display:grid;grid-column:3;grid-row:1 / span 2;justify-items:center;gap:3px;margin-left:12px}
+.aggilli-volume-line #aggilliEqToggle{grid-column:2;justify-self:start;margin:0}
+.aggilli-volume-line #aggilliMute{grid-row:1;grid-column:1}
+.aggilli-volume-line output{min-width:0;font-variant-numeric:tabular-nums;font-weight:750}
+.aggilli-eq-panel{border-top:1px solid #8a9191;margin-top:9px}
+.aggilli-eq-bands label{align-items:center;text-align:center;color:#20292b}
+.aggilli-eq-bands output{font-variant-numeric:tabular-nums}
+.rotary-dial{
+ --size:60px;--angle:0deg;display:block;position:relative;width:var(--size);height:var(--size);
+ border-radius:50%;background:repeating-conic-gradient(from 0deg,#303b3d 0deg 2deg,transparent 2deg 20deg);
+ box-shadow:inset 0 0 0 1px #798183;
+}
+.volume-dial .rotary-dial{--size:79px}
+.rotary-cap{
+ position:absolute;inset:7px;border-radius:50%;border:1px solid #737976;
+ background:radial-gradient(circle,#efefea 0 22%,#d8d9d3 66%,#a0a6a5 68% 73%,#e0e2db 76%);
+ box-shadow:1px 3px 5px #28313599,inset 0 1px 2px #fff;
+ transform:rotate(var(--angle));pointer-events:none;
+}
+.rotary-cap::after{content:"";position:absolute;top:6px;left:calc(50% - 1px);width:2px;height:24%;border-radius:3px;background:#32494f;box-shadow:1px 0 #fff8}
+.rotary-dial input[type="range"]{position:absolute;inset:0;width:100%;height:100%;min-width:0;margin:0;opacity:0;cursor:grab;touch-action:none}
+.rotary-dial input:active{cursor:grabbing}
+.rotary-dial:focus-within{outline:2px solid #285a65;outline-offset:3px}
+@media(max-width:360px){.rotary-dial{--size:52px}.volume-dial .rotary-dial{--size:65px}}
+</style>
 </head>
 <body>
 <main>
@@ -288,9 +317,11 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
 <div class="aggilli-sound" aria-label="Volume e equalizador">
   <div class="aggilli-volume-line">
     <button type="button" id="aggilliMute" aria-label="Silenciar" title="Silenciar">🔊</button>
-    <label for="aggilliVolume">VOLUME</label>
-    <input id="aggilliVolume" type="range" min="0" max="100" value="75" aria-label="Volume">
-    <output id="aggilliVolumeValue" for="aggilliVolume">75%</output>
+    <div class="volume-dial">
+      <label for="aggilliVolume">VOLUME</label>
+      <span class="rotary-dial"><span class="rotary-cap" aria-hidden="true"></span><input id="aggilliVolume" type="range" min="0" max="100" step="1" value="75" aria-label="Volume"></span>
+      <output id="aggilliVolumeValue" for="aggilliVolume">75%</output>
+    </div>
     <button type="button" id="aggilliEqToggle" aria-expanded="false" aria-controls="aggilliEqPanel">EQ <span aria-hidden="true">▾</span></button>
   </div>
   <div id="aggilliEqPanel" class="aggilli-eq-panel" hidden>
@@ -302,9 +333,9 @@ main{margin:26px auto;padding:14px;background:#141819;border:1px solid #4c5253;b
       <button type="button" id="aggilliEqReset">Zerar</button>
     </div>
     <div class="aggilli-eq-bands">
-      <label>GRAVES <output id="aggilliBassValue">0 dB</output><input id="aggilliBass" type="range" min="-12" max="12" value="0" step="1"></label>
-      <label>MÉDIOS <output id="aggilliMidValue">0 dB</output><input id="aggilliMid" type="range" min="-12" max="12" value="0" step="1"></label>
-      <label>AGUDOS <output id="aggilliTrebleValue">0 dB</output><input id="aggilliTreble" type="range" min="-12" max="12" value="0" step="1"></label>
+      <label>GRAVES <span class="rotary-dial"><span class="rotary-cap" aria-hidden="true"></span><input id="aggilliBass" type="range" min="-12" max="12" value="0" step="1" aria-label="Graves"></span><output id="aggilliBassValue" for="aggilliBass">0 dB</output></label>
+      <label>MÉDIOS <span class="rotary-dial"><span class="rotary-cap" aria-hidden="true"></span><input id="aggilliMid" type="range" min="-12" max="12" value="0" step="1" aria-label="Médios"></span><output id="aggilliMidValue" for="aggilliMid">0 dB</output></label>
+      <label>AGUDOS <span class="rotary-dial"><span class="rotary-cap" aria-hidden="true"></span><input id="aggilliTreble" type="range" min="-12" max="12" value="0" step="1" aria-label="Agudos"></span><output id="aggilliTrebleValue" for="aggilliTreble">0 dB</output></label>
     </div>
     <small id="aggilliEqStatus" role="status">O equalizador é ativado ao reproduzir áudio.</small>
   </div>
@@ -956,13 +987,41 @@ fetch('catalogo.json',{cache:'no-store'})
   const bands=['Bass','Mid','Treble'];
   const presets={flat:[0,0,0],rock:[4,-2,4],pop:[-1,3,3],bass:[8,-1,0],vocal:[-3,5,2]};
   let context=null,filters=null,analyser=null;
+  function updateDial(input){
+    const ratio=(Number(input.value)-Number(input.min))/(Number(input.max)-Number(input.min));
+    input.parentElement.style.setProperty('--angle',(-135+ratio*270)+'deg');
+  }
+  function enableDial(input){
+    let drag;
+    input.addEventListener('pointerdown',event=>{
+      if(!event.isPrimary||event.button!==0)return;
+      event.preventDefault();
+      input.focus();
+      input.setPointerCapture(event.pointerId);
+      drag={id:event.pointerId,x:event.clientX,y:event.clientY,value:Number(input.value)};
+    });
+    input.addEventListener('pointermove',event=>{
+      if(!drag||event.pointerId!==drag.id)return;
+      const x=event.clientX-drag.x, y=drag.y-event.clientY;
+      const min=Number(input.min), max=Number(input.max), step=Number(input.step);
+      const offset=(Math.abs(x)>Math.abs(y)?x:y)*(max-min)/110;
+      const next=Math.min(max,Math.max(min,Math.round((drag.value+offset-min)/step)*step+min));
+      if(next!==Number(input.value)){
+        input.value=String(next);
+        input.dispatchEvent(new Event('input',{bubbles:true}));
+      }
+    });
+    input.addEventListener('lostpointercapture',()=>{drag=undefined;});
+  }
+  [volume,...bands.map(name=>document.getElementById('aggilli'+name))].forEach(enableDial);
+
   function readVolume(){
     try {const raw=localStorage.getItem('aggilli-volume');if(raw===null)return 75;const v=Number(raw);return Number.isFinite(v)&&v>=0&&v<=100?v:75;}catch(e){return 75;}
   }
   function save(key,value){try{localStorage.setItem(key,String(value));}catch(e){}}
   function setVolume(value){
     const v=Math.max(0,Math.min(100,Number(value)||0));
-    mediaElements.forEach(media=>{media.volume=v/100});volume.value=String(v);volumeValue.textContent=v+'%';
+    mediaElements.forEach(media=>{media.volume=v/100});volume.value=String(v);volumeValue.textContent=v+'%';updateDial(volume);
     mute.textContent=activePlayer().muted||v===0?'🔇':'🔊';
     mute.setAttribute('aria-label',activePlayer().muted?'Ativar som':'Silenciar');
     save('aggilli-volume',v);
@@ -975,6 +1034,7 @@ fetch('catalogo.json',{cache:'no-store'})
     bands.forEach((name,i)=>{
       const slider=document.getElementById('aggilli'+name);
       slider.value=String(values[i]);
+      updateDial(slider);
       document.getElementById('aggilli'+name+'Value').textContent=values[i]+' dB';
       if(filters)filters[i].gain.value=values[i];
     });
