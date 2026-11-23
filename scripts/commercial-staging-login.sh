@@ -32,7 +32,11 @@ try:
         print("Conta criada.")
     token = post("/listeners/login")["access_token"]
 except urllib.error.HTTPError as error:
-    sys.exit(f"Falhou: HTTP {error.code} {error.read().decode(errors='replace')[:200]}")
+    # Mostra só a explicação, nunca o corpo bruto (que poderia repetir a senha).
+    messages = {409: "essa conta já existe; rode sem --register para entrar",
+                401: "e-mail ou senha incorretos",
+                422: "dados inválidos (a senha precisa de pelo menos 12 caracteres)"}
+    sys.exit(f"Falhou: HTTP {error.code}: {messages.get(error.code, 'erro inesperado da API')}")
 
 print("\nURL HTTPS da API comercial: https://server.taila400aa.ts.net/music/commercial-api")
 print("Token do ouvinte (válido por 12 h, não compartilhe):")

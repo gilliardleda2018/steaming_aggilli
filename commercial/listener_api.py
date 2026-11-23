@@ -8,8 +8,9 @@ import sqlite3
 import time
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Response
-from fastapi.responses import FileResponse
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from commercial.listeners import ListenerStore
@@ -18,6 +19,14 @@ from commercial.entitlements import allowed_to_play
 from commercial.ani_dj import build_session, resolve_intent
 
 app = FastAPI(title="Aggilli Music Commercial Staging", docs_url=None, redoc_url=None, openapi_url=None)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    """Explain what is wrong without echoing submitted values (passwords included)."""
+    detail = [{"loc": list(error.get("loc", ())), "msg": error.get("msg", "Invalid value"),
+               "type": error.get("type", "value_error")} for error in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": detail})
 
 
 def store():
