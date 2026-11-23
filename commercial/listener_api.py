@@ -28,6 +28,15 @@ def registry():
     return RightsRegistry(Path(os.environ.get("AGGILLI_COMMERCIAL_DATA_DIR", "/var/lib/aggilli-music-commercial")) / "rights.json")
 
 
+def enforce_limit(listener_id, scope, limit):
+    try:
+        retry_after = store().consume_limit(listener_id, scope, limit)
+    except (OSError, ValueError, sqlite3.Error):
+        raise HTTPException(503, "Request limit unavailable")
+    if retry_after:
+        raise HTTPException(429, "Too many requests", headers={"Retry-After": str(retry_after)})
+
+
 class Credentials(BaseModel):
     email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=12, max_length=256)
@@ -151,6 +160,7 @@ def playback_signature(track_id, session_hash, expires):
 
 @app.post("/listeners/playback/{track_id}/grant")
 def playback_grant(track_id: str, response: Response, authorization: str = Header(), listener=Depends(current_listener)):
+    enforce_limit(listener["id"], "playback-grant", 30)
     playback_path(track_id, listener)
     session_hash = hashlib.sha256(authorization[7:].encode()).hexdigest()
     expires = int(time.time()) + PLAYBACK_GRANT_TTL
@@ -205,6 +215,7 @@ def dj_session(payload: DjRequest, listener=Depends(current_listener)):
     """
     from datetime import date
     import json
+    enforce_limit(listener["id"], "dj-session", 10)
     catalog_path = Path(os.environ.get(
         "AGGILLI_COMMERCIAL_CATALOG_FILE",
         "/var/lib/aggilli-music-commercial/catalog.json",
@@ -224,8 +235,9 @@ def dj_session(payload: DjRequest, listener=Depends(current_listener)):
         expiry = datetime.fromisoformat(subscription["access_until"].replace("Z", "+00:00"))
         if expiry.tzinfo is None or expiry <= datetime.now(timezone.utc):
             raise HTTPException(403, "Subscription expired")
+        territory = os.environ.get("AGGILLI_COMMERCIAL_PLAYBACK_TERRITORY") or payload.territory.upper()
         return build_session(
-            payload.prompt, tracks, registry().read(), payload.territory.upper(),
+            payload.prompt, tracks, registry().read(), territory,
             limit=payload.limit,
             model_enabled=os.environ.get("AGGILLI_ANI_ENABLED", "false").lower() == "true",
         )

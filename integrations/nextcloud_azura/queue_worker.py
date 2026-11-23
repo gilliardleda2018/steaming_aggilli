@@ -16,8 +16,9 @@ CATALOG_REFRESH = "/home/gilliard/projetos/steaming_aggilli/integrations/nextclo
 PYTHON = "/opt/aggilli-nextcloud-sync-venv/bin/python"
 
 
-def report(state, message):
+def report(state, message, request_id):
     data = {"state": state, "message": message,
+            "request_id": request_id,
             "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
     temp = STATUS.with_suffix(".tmp")
     temp.write_text(json.dumps(data, ensure_ascii=False))
@@ -35,30 +36,30 @@ def main():
             return
         active = subprocess.run(["/usr/bin/systemctl", "is-active", "--quiet", UNIT]).returncode == 0
         if active:
-            report("running", "Sincronização anterior ainda está em andamento")
             return
         # The request content is intentionally ignored; fixed service only.
+        request_id = str(QUEUE.stat(follow_symlinks=False).st_mtime_ns)
         QUEUE.unlink()
-        report("running", "Importação iniciada")
+        report("running", "Importação iniciada", request_id)
         try:
             result = subprocess.run(
                 ["/usr/bin/systemctl", "start", "--wait", UNIT],
                 timeout=6 * 3600 + 60, capture_output=True, text=True,
             )
             if result.returncode != 0:
-                report("failed", "Falha na importação; consulte journalctl")
+                report("failed", "Falha na importação; consulte journalctl", request_id)
                 return
             refresh = subprocess.run(
                 [PYTHON, CATALOG_REFRESH],
                 timeout=90, capture_output=True, text=True,
             )
             if refresh.returncode == 0:
-                report("success", "Importação concluída e catálogo do Winamp atualizado")
+                report("success", "Importação concluída e catálogo do Winamp atualizado", request_id)
             else:
                 report("failed", "Importação concluída, mas atualização do catálogo falhou: "
-                       + (refresh.stderr.strip() or refresh.stdout.strip())[-350:])
+                       + (refresh.stderr.strip() or refresh.stdout.strip())[-350:], request_id)
         except (OSError, subprocess.TimeoutExpired):
-            report("failed", "Não foi possível concluir o serviço")
+            report("failed", "Não foi possível concluir o serviço", request_id)
 
 
 if __name__ == "__main__":

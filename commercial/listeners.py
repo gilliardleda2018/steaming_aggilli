@@ -62,9 +62,28 @@ class ListenerStore:
           status TEXT NOT NULL, access_until TEXT NOT NULL,
           FOREIGN KEY(listener_id) REFERENCES listeners(id)
         );
+        CREATE TABLE IF NOT EXISTS listener_rate_limits(
+          listener_id TEXT NOT NULL REFERENCES listeners(id) ON DELETE CASCADE,
+          scope TEXT NOT NULL, window INTEGER NOT NULL, used INTEGER NOT NULL,
+          PRIMARY KEY(listener_id, scope)
+        );
         """)
         os.chmod(self.path, 0o600)
         return db
+
+    def consume_limit(self, listener_id: str, scope: str, limit: int) -> int:
+        """Return zero on success or the seconds until the next minute."""
+        now = int(utcnow().timestamp())
+        window, elapsed = divmod(now, 60)
+        with self.connect() as db:
+            result = db.execute("""
+                INSERT INTO listener_rate_limits VALUES (?, ?, ?, 1)
+                ON CONFLICT(listener_id, scope) DO UPDATE SET
+                  window=excluded.window,
+                  used=CASE WHEN window=excluded.window THEN used+1 ELSE 1 END
+                WHERE window!=excluded.window OR used<?
+            """, (listener_id, scope, window, limit))
+            return 0 if result.rowcount else 60 - elapsed
 
     def register(self, email: str, password: str):
         email = email.strip().lower()

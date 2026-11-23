@@ -162,18 +162,22 @@ SYNC_STATUS = Path("/var/lib/aggilli-music/sync-status.json")
 
 @app.post("/sync-nextcloud")
 async def start_nextcloud_sync(_: None = Depends(require_upload_auth)):
+    from datetime import datetime, timezone
     import os
-    import time
     request = SYNC_QUEUE / "pending"
     try:
-        fd = os.open(str(request), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-        with os.fdopen(fd, "w") as output:
-            output.write(str(int(time.time())) + "\\n")
-    except FileExistsError:
-        return {"accepted": True, "message": "Já existe uma sincronização aguardando processamento"}
+        try:
+            fd = os.open(request, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        except FileExistsError:
+            queued_at = request.stat(follow_symlinks=False).st_mtime_ns
+        else:
+            with os.fdopen(fd, "wb") as pending:
+                queued_at = os.fstat(pending.fileno()).st_mtime_ns
     except OSError:
         raise HTTPException(503, detail="Fila indisponível ou sem permissão de escrita")
-    return {"accepted": True, "message": "Solicitação registrada para processamento"}
+    return {"accepted": True, "request_id": str(queued_at),
+            "requested_at": datetime.fromtimestamp(queued_at / 1e9, timezone.utc).isoformat(),
+            "message": "Solicitação registrada para processamento"}
 
 
 @app.get("/sync-nextcloud/status")
@@ -181,6 +185,6 @@ async def nextcloud_sync_status(_: None = Depends(require_upload_auth)):
     import json
     try:
         status = json.loads(SYNC_STATUS.read_text())
-        return {k: status.get(k) for k in ("state", "updated_at", "message")}
+        return {k: status.get(k) for k in ("state", "updated_at", "message", "request_id")}
     except (FileNotFoundError, ValueError, OSError):
         return {"state": "unknown", "message": "Nenhuma execução registrada"}

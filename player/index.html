@@ -964,22 +964,36 @@ fetch('catalogo.json',{cache:'no-store'})
  const status=document.getElementById('aggilliSyncCloudStatus');
  button.addEventListener('click',async()=>{
   button.disabled=true;
+  let accepted=false;
   status.textContent='Solicitando sincronização ao servidor…';
   try{
    const response=await fetch('upload-api/sync-nextcloud',{method:'POST',credentials:'same-origin',cache:'no-store'});
    const body=await response.json().catch(()=>({}));
    if(!response.ok)throw Error(body.detail||'HTTP '+response.status);
+   if(body.accepted!==true)throw Error('Resposta inesperada do servidor.');
+   accepted=true;
+   const requestedAt=Date.parse(body.requested_at||response.headers.get('Date')||'');
    status.textContent='Solicitação recebida. Aguardando processamento…';
    for(let attempt=0;attempt<120;attempt++){
     await new Promise(resolve=>setTimeout(resolve,5000));
     const check=await fetch('upload-api/sync-nextcloud/status',{credentials:'same-origin',cache:'no-store'});
-    if(!check.ok)break;
+    if(!check.ok){
+     status.textContent='Solicitação enviada, mas o status está indisponível (HTTP '+check.status+').';
+     return;
+    }
     const current=await check.json();
+    const sameRequest=body.request_id
+     ? current.request_id===body.request_id
+     : Date.parse(current.updated_at)>requestedAt;
+    if(!sameRequest)continue;
     if(current.state==='running')status.textContent='Sincronizando mídias…';
-    if(current.state==='success'){status.textContent='Sincronização concluída. Atualize a biblioteca para ver as novas faixas.';break}
-    if(current.state==='failed'){status.textContent='Sincronização falhou. Consulte os logs no Debian.';break}
+    if(current.state==='success'){status.textContent='Sincronização concluída. Atualize a biblioteca para ver as novas faixas.';return}
+    if(current.state==='failed'){status.textContent='Sincronização falhou. Consulte os logs no Debian.';return}
    }
-  }catch(error){status.textContent='Não foi possível iniciar: '+error.message}
+   status.textContent='Solicitação enviada. Ainda não foi possível confirmar a conclusão.';
+  }catch(error){
+   status.textContent=(accepted?'Solicitação enviada, mas o status está indisponível: ':'Não foi possível iniciar: ')+error.message;
+  }
   finally{button.disabled=false}
  });
 })();
