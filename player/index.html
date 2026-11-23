@@ -1032,6 +1032,13 @@ function recordRecent(event){
 }
 audio.addEventListener('playing',recordRecent);
 cloudVideo.addEventListener('playing',recordRecent);
+// Troca só o aviso de carregamento; mensagens de erro continuam visíveis.
+function markTrackPlaying(event){
+ const status=document.getElementById('status');
+ if(playbackMode==='track'&&event.currentTarget===activeMedia()&&status.textContent==='Carregando faixa…')status.textContent='Reproduzindo';
+}
+audio.addEventListener('playing',markTrackPlaying);
+cloudVideo.addEventListener('playing',markTrackPlaying);
 cloudVideo.addEventListener('play',()=>{audio.pause();document.getElementById('mainPlay').textContent='⏸';refreshNow()});
 audio.addEventListener('pause',()=>{if(activeMedia()===audio)document.getElementById('mainPlay').textContent='▶'});
 cloudVideo.addEventListener('pause',()=>{if(activeMedia()===cloudVideo)document.getElementById('mainPlay').textContent='▶'});

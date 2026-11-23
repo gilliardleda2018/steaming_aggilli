@@ -27,5 +27,11 @@ class PlayerMediaControlsTests(unittest.TestCase):
         self.assertIn("nexttrack:()=>nextTrack()", HTML)
         self.assertIn("if(!('mediaSession' in navigator)||!('MediaMetadata' in window))return;", HTML)
 
+    def test_loading_status_clears_when_track_starts(self):
+        self.assertIn("function markTrackPlaying(event){", HTML)
+        self.assertIn("status.textContent==='Carregando faixa…')status.textContent='Reproduzindo'", HTML)
+        self.assertIn("audio.addEventListener('playing',markTrackPlaying);", HTML)
+        self.assertIn("cloudVideo.addEventListener('playing',markTrackPlaying);", HTML)
+
 if __name__ == "__main__":
     unittest.main()
